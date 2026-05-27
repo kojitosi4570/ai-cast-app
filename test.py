@@ -75,7 +75,6 @@ def generate_base_third_message(user_name, char_type, job):
 # =====================================================================
 def ask_grok_ai(prompt):
     time.sleep(1.5)
-    # ★ ここが安全な「鍵穴」に変わりました！GitHubに上げても安全です。
     api_key = st.secrets["XAI_API_KEY"]
     
     url = "https://api.x.ai/v1/chat/completions"
@@ -85,7 +84,7 @@ def ask_grok_ai(prompt):
         "model": "grok-4.3",
         "messages": [{"role": "user", "content": safe_prompt}],
         "temperature": 0.7,
-        "max_tokens": 120  # 少し柔軟性を持たせるために120に微増
+        "max_tokens": 120
     }
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=15)
@@ -110,7 +109,6 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
     if not casts:
         st.stop()
         
-    # 最新ニュースの箇条書きを取得
     news_list_text = get_multiple_trending_news()
 
     with st.spinner("AIが職業とニュースの相性を分析してセリフを生成中..."):
@@ -120,7 +118,6 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
             # ------------------ 1通目の処理（職業×ニュース自動連動） ------------------
             dice_1st = random.randint(1, 100)
             if dice_1st <= 20:
-                # 命令文を「職業に合うニュースを自分で選べ」に超絶パワーアップ
                 prompt_1st = (
                     f"あなたはマッチングアプリにいる実在の女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
                     f"相手の男（{user_name}さん）へのフランクな最初のメッセージを1通だけ書いてください。\n\n"
@@ -134,4 +131,25 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
                 if not message_1st:
                     message_1st = generate_base_first_message(user_name, cast['look_type'])
             else:
-                message_1st = generate_base_first_message(user_name, cast['look_
+                message_1st = generate_base_first_message(user_name, cast['look_type'])
+                
+            st.info(f"**【1通目】**\n{message_1st}")
+            
+            # ------------------ 3通目の処理 ------------------
+            dice_3rd = random.randint(1, 100)
+            if dice_3rd <= 8:
+                prompt_3rd = (
+                    f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・見た目:{cast['look_type']}）」です。\n"
+                    f"相手の男（{user_name}さん）への3通目のチャットを書いてください。\n"
+                    f"条件：普段は男に媚びていますが、実は自分の仕事（{cast['job']}）には超ストイックで真剣です。周りから怖いと言われるくらい集中しちゃうギャップを、絵文字なしの凛とした真面目なトーンで伝えてください。「笑」や「（笑）」は絶対禁止です。"
+                )
+                message_3rd = ask_grok_ai(prompt_3rd)
+                if not message_3rd:
+                    message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
+            else:
+                message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
+                
+            st.success(f"**【3通目】**\n{message_3rd}")
+            st.divider() 
+            
+    st.balloons()
