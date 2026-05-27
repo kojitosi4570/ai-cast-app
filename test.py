@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import requests
 
 # =====================================================================
-# 1. 【データ層】Excelから本番キャストデータを読み込み、プロフィール用の最寄り駅を自動割り当て
+# 1. 【データ層】Excelから本番キャストデータを読み込み
 # =====================================================================
 def load_cast_master_from_excel():
     excel_file = "cast_master_list.xlsx"
@@ -20,7 +20,6 @@ def load_cast_master_from_excel():
         df = pd.read_excel(excel_file)
         cast_list = []
         
-        # 社長指定の「市名 ＋ 駅名」のすっきりリアルな地域リスト
         real_local_areas = [
             "川崎市武蔵小杉駅",
             "川崎市鹿島田駅",
@@ -39,7 +38,6 @@ def load_cast_master_from_excel():
             if pd.isna(row.get("名前")):
                 continue
                 
-            # キャストごとに最寄り駅をランダムで1つ固定
             area_index = idx % len(real_local_areas)
             assigned_area = real_local_areas[area_index]
             
@@ -49,7 +47,7 @@ def load_cast_master_from_excel():
                 "job": str(row.get("職業", "不明")).strip(),
                 "char_type": str(row.get("キャラクタータイプ", "普通")).strip(), 
                 "look_type": str(row.get("見た目系統", "普通系")).strip(),
-                "station": assigned_area # プロフィール表示用の最寄り駅
+                "station": assigned_area 
             })
         return cast_list
     except Exception as e:
@@ -57,7 +55,7 @@ def load_cast_master_from_excel():
         return []
 
 # =====================================================================
-# 2. 【ニュース層】Yahoo!ニュースから複数の最新ニュースの候補をまとめて取得
+# 2. 【ニュース層】Yahoo!ニュースから最新ニュースを取得
 # =====================================================================
 def get_multiple_trending_news():
     url = "https://news.yahoo.co.jp/rss/topics/top-picks.xml"
@@ -86,7 +84,7 @@ def get_multiple_trending_news():
     return "\n".join([f"- {title}" for title in news_candidates[:8]])
 
 # =====================================================================
-# 3. 【ロジック層】定型文メッセージ（AI不使用時のバックアップ）
+# 3. 【ロジック層】定型文メッセージ（バックアップ）
 # =====================================================================
 def generate_base_first_message(user_name, look_type):
     if "ギャル" in look_type or "グラドル" in look_type:
@@ -102,7 +100,7 @@ def generate_base_third_message(user_name, char_type, job):
     return f"「あ、いいですね！焼き鳥とかめっちゃ好きです。\nあ、やばい、今からミーティングだったの忘れてた💦 ちょっと行ってきます！\n仕事だるいしサボっちゃいたいなー。{user_name}さんは今日仕事サボったりしてないですか？」"
 
 # =====================================================================
-# 4. 【AI文章生成層】GrokのAPIを呼び出す（安全のための1.5秒ブレーキ入り）
+# 4. 【AI文章生成層】Grok呼び出し
 # =====================================================================
 def ask_grok_ai(prompt):
     time.sleep(1.5)
@@ -128,7 +126,7 @@ def ask_grok_ai(prompt):
 # =====================================================================
 # 5. 【UI層】Web画面の構築
 # =====================================================================
-st.set_page_config(page_title="AIキャスト 職業連動プロ版", layout="centered")
+st.set_page_config(page_title="AIキャスト 極悪自動生成プロ版", layout="centered")
 
 st.title("🤖 小嶋企画 AIチャットエンジン")
 
@@ -142,10 +140,9 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
     news_list_text = get_multiple_trending_news()
 
     for cast in casts[:30]:  
-        # プロフィール欄（見出し）を「市名＋駅名」のシンプル表記に最適化！
         st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']} / 📍最寄り:{cast['station']})")
         
-        # ------------------ 1通目の処理（ニュース確率 50% / 質問締め強化） ------------------
+        # ------------------ 1通目の処理 ------------------
         dice_1st = random.randint(1, 100)
         if dice_1st <= 50:
             prompt_1st = (
@@ -165,7 +162,7 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
             
         st.info(f"**【1通目】**\n{message_1st}")
         
-        # ------------------ 2通目の処理（タメ口80%：不快ワード完全封鎖の決定版仕様） ------------------
+        # ------------------ 2通目の処理 ------------------
         dice_2nd = random.randint(1, 100)
         
         base_prompt_2nd = (
@@ -193,11 +190,14 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
                 "「{user_name}くん今日もお疲れ様！いつもがんばってて本当に偉いよ。無理しすぎないでね」という風に、優しく包み込むようなタメ口で男の脳をバグらせてください。※『お前』や『あなた』、呼び捨て等は絶対禁止です。"
             )
         elif dice_2nd <= 80:
-            # ③ おちゃめな匂わせ・タメ口ver（30%）
+            # ③ おちゃめな匂わせ・タメ口（ワード無限生成ver）（30%）
             prompt_2nd = base_prompt_2nd + (
-                "【個別ミッション：おちゃめな匂わせ短文（ガチタメ口）】\n"
+                "【個別ミッション：おちゃめな匂わせ短文（ガチタメ口・パワーワード自動生成）】\n"
                 "敬語を完全に捨てて、フランクなタメ口にしてください。\n"
-                "「合法の人間ビーズクッション」「プレミアム低反発ひざ枕」など、男が勝手にフィジカルな想像（密着感や柔らかさ）をして突っ込んでしまうお茶目なパワーワードを1つ混ぜて、短いタメ口で作ってください。※『お前』や『あなた』、呼び捨て等は絶対禁止です。"
+                "男が勝手にフィジカルな想像（密着感や柔らかさ、癒やし）をして突っ込んでしまうような『お茶目なオリジナルパワーワード（例え話）』をあなたがその場で新しく1つ生み出して混ぜてください。\n"
+                "※コツ：家具、寝具、スイーツなどの「柔らかいモノ」「温かいモノ」に人間を掛け合わせること（例：歩くマシュマロソファ、全自動ヨシヨシ機など）。\n"
+                "※直接的なエロ単語（胸、お尻など）は絶対禁止ですが、男がギリギリ妄想してしまうユーモアを真顔で放ってください。\n"
+                "※『お前』や『あなた』、呼び捨て等は絶対禁止です。"
             )
         else:
             # ④ ツッコミ待ち大ボケ ＆ 異次元ボケ・タメ口ver（20%）
@@ -216,7 +216,7 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
             
         st.warning(f"**【2通目（メンタルケア）】**\n{message_2nd}")
         
-        # ------------------ 3通目の処理（ストイックギャップ / 質問締め強化） ------------------
+        # ------------------ 3通目の処理 ------------------
         dice_3rd = random.randint(1, 100)
         if dice_3rd <= 8:
             prompt_3rd = (
