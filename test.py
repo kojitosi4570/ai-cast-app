@@ -111,45 +111,45 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
         
     news_list_text = get_multiple_trending_news()
 
-    with st.spinner("AIが職業とニュースの相性を分析してセリフを生成中..."):
-        for cast in casts[:4]:  
-            st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']})")
-            
-            # ------------------ 1通目の処理（職業×ニュース自動連動） ------------------
-            dice_1st = random.randint(1, 100)
-            if dice_1st <= 20:
-                prompt_1st = (
-                    f"あなたはマッチングアプリにいる実在の女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
-                    f"相手の男（{user_name}さん）へのフランクな最初のメッセージを1通だけ書いてください。\n\n"
-                    f"【最重要ルール】：\n"
-                    f"以下の最新ニュースのリストから、あなたの「職業」や「年齢」に最も関わりが深く、会話として出しても不自然じゃない話題を『1つだけ』あなたの意思で選んで、チャットの中に自然に混ぜてください。\n"
-                    f"例えば、IT系なら経済や技術系、大学生ならエンタメやトレンド、といったように親和性の高いものを結びつけてください。\n\n"
-                    f"【最新ニュースリスト】:\n{news_list_text}\n\n"
-                    f"【絶対禁止】：サクラっぽくなるので「笑」や「（笑）」は一切使わないでください。短文でメッセージ本文のみをスマートに出力してください。"
-                )
-                message_1st = ask_grok_ai(prompt_1st)
-                if not message_1st:
-                    message_1st = generate_base_first_message(user_name, cast['look_type'])
-            else:
+    # ★ここから「生成中...」の文字を完全に撤去し、スマートに出現するよう修正しました！
+    for cast in casts[:4]:  
+        st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']})")
+        
+        # ------------------ 1通目の処理（職業×ニュース自動連動） ------------------
+        dice_1st = random.randint(1, 100)
+        if dice_1st <= 20:
+            prompt_1st = (
+                f"あなたはマッチングアプリにいる実在の女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
+                f"相手の男（{user_name}さん）へのフランクな最初のメッセージを1通だけ書いてください。\n\n"
+                f"【最重要ルール】：\n"
+                f"以下の最新ニュースのリストから、あなたの「職業」や「年齢」に最も関わりが深く、会話として出しても不自然じゃない話題を『1つだけ』あなたの意思で選んで、チャットの中に自然に混ぜてください。\n"
+                f"例えば、IT系なら経済や技術系、大学生ならエンタメやトレンド、といったように親和性の高いものを結びつけてください。\n\n"
+                f"【最新ニュースリスト】:\n{news_list_text}\n\n"
+                f"【絶対禁止】：サクラっぽくなるので「笑」や「（笑空間）」は一切使わないでください。短文でメッセージ本文のみをスマートに出力してください。"
+            )
+            message_1st = ask_grok_ai(prompt_1st)
+            if not message_1st:
                 message_1st = generate_base_first_message(user_name, cast['look_type'])
-                
-            st.info(f"**【1通目】**\n{message_1st}")
+        else:
+            message_1st = generate_base_first_message(user_name, cast['look_type'])
             
-            # ------------------ 3通目の処理 ------------------
-            dice_3rd = random.randint(1, 100)
-            if dice_3rd <= 8:
-                prompt_3rd = (
-                    f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・見た目:{cast['look_type']}）」です。\n"
-                    f"相手の男（{user_name}さん）への3通目のチャットを書いてください。\n"
-                    f"条件：普段は男に媚びていますが、実は自分の仕事（{cast['job']}）には超ストイックで真剣です。周りから怖いと言われるくらい集中しちゃうギャップを、絵文字なしの凛とした真面目なトーンで伝えてください。「笑」や「（笑）」は絶対禁止です。"
-                )
-                message_3rd = ask_grok_ai(prompt_3rd)
-                if not message_3rd:
-                    message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
-            else:
+        st.info(f"**【1通目】**\n{message_1st}")
+        
+        # ------------------ 3通目の処理 ------------------
+        dice_3rd = random.randint(1, 100)
+        if dice_3rd <= 8:
+            prompt_3rd = (
+                f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・見た目:{cast['look_type']}）」です。\n"
+                f"相手の男（{user_name}さん）への3通目のチャットを書いてください。\n"
+                f"条件：普段は男に媚びていますが、実は自分の仕事（{cast['job']}）には超ストイックで真剣です。周りから怖いと言われるくらい集中しちゃうギャップを、絵文字なしの凛とした真面目なトーンで伝えてください。「笑」や「（笑）」は絶対禁止です。"
+            )
+            message_3rd = ask_grok_ai(prompt_3rd)
+            if not message_3rd:
                 message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
-                
-            st.success(f"**【3通目】**\n{message_3rd}")
-            st.divider() 
+        else:
+            message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
+            
+        st.success(f"**【3通目】**\n{message_3rd}")
+        st.divider() 
             
     st.balloons()
