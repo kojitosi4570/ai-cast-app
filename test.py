@@ -7,24 +7,54 @@ import xml.etree.ElementTree as ET
 import requests
 
 # =====================================================================
-# 1. 【データ層】Excelからキャストデータを読み込む
+# 1. 【データ層】Excelから本番キャストデータを読み込み、プロフィール用の最寄り駅を自動割り当て
 # =====================================================================
 def load_cast_master_from_excel():
     excel_file = "cast_master_list.xlsx"
+    
     if not os.path.exists(excel_file):
-        st.error(f"⚠️ エラー: {excel_file} が見つかりません！")
+        st.error(f"⚠️ エラー: 本番用のExcelファイル「{excel_file}」が同じフォルダに見つかりません！")
         return []
-    df = pd.read_excel(excel_file)
-    cast_list = []
-    for _, row in df.iterrows():
-        cast_list.append({
-            "name": str(row.get("名前", "名無し")),
-            "age": str(row.get("年齢", "20")),
-            "job": str(row.get("職業", "不明")),
-            "char_type": str(row.get("キャラクタータイプ", "普通")), 
-            "look_type": str(row.get("見た目系統", "普通系"))
-        })
-    return cast_list
+    
+    try:
+        df = pd.read_excel(excel_file)
+        cast_list = []
+        
+        # 社長指定の「市名 ＋ 駅名」のすっきりリアルな地域リスト
+        real_local_areas = [
+            "川崎市武蔵小杉駅",
+            "川崎市鹿島田駅",
+            "川崎市元住吉駅",
+            "川崎市溝の口駅",
+            "川崎市川崎駅",
+            "横浜市日吉駅",
+            "横浜市綱島駅",
+            "横浜市菊名駅",
+            "横浜市新横浜駅",
+            "さいたま市大宮駅",
+            "川越市川越駅"
+        ]
+        
+        for idx, row in df.iterrows():
+            if pd.isna(row.get("名前")):
+                continue
+                
+            # キャストごとに最寄り駅をランダムで1つ固定
+            area_index = idx % len(real_local_areas)
+            assigned_area = real_local_areas[area_index]
+            
+            cast_list.append({
+                "name": str(row.get("名前", "名無し")).strip(),
+                "age": str(row.get("年齢", "20")).split('.')[0].strip(),
+                "job": str(row.get("職業", "不明")).strip(),
+                "char_type": str(row.get("キャラクタータイプ", "普通")).strip(), 
+                "look_type": str(row.get("見た目系統", "普通系")).strip(),
+                "station": assigned_area # プロフィール表示用の最寄り駅
+            })
+        return cast_list
+    except Exception as e:
+        st.error(f"⚠️ Excelファイルの読み込み中にエラーが発生しました: {e}")
+        return []
 
 # =====================================================================
 # 2. 【ニュース層】Yahoo!ニュースから複数の最新ニュースの候補をまとめて取得
@@ -64,7 +94,7 @@ def generate_base_first_message(user_name, look_type):
     return f"「はじめまして！マッチできて嬉しいです✨ {user_name}さんは普段どのへんで遊ぶことが多いんですか？」"
 
 def generate_base_second_message(user_name, char_type):
-    return f"担当「{user_name}さんお仕事お疲れ様！私、周りから『合法の人間ビーズクッション』って呼ばれるくらいモチモチで癒やし系らしいから、疲れてたら1回ダイブしてみる？最近ちゃんと夜眠れてますか？」"
+    return f"「{user_name}さんお仕事お疲れ様！私、周りから『合法の人間ビーズクッション』って呼ばれるくらいモチモチで癒やし系らしいから、疲れてたら1回ダイブしてみる？最近ちゃんと夜眠れてますか？」"
 
 def generate_base_third_message(user_name, char_type, job):
     if "愛され" in char_type or "マシュマロ" in char_type:
@@ -111,8 +141,9 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
         
     news_list_text = get_multiple_trending_news()
 
-    for cast in casts[:4]:  
-        st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']})")
+    for cast in casts[:30]:  
+        # プロフィール欄（見出し）を「市名＋駅名」のシンプル表記に最適化！
+        st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']} / 📍最寄り:{cast['station']})")
         
         # ------------------ 1通目の処理（ニュース確率 50% / 質問締め強化） ------------------
         dice_1st = random.randint(1, 100)
@@ -134,13 +165,13 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
             
         st.info(f"**【1通目】**\n{message_1st}")
         
-        # ------------------ 2通目の処理（完璧クリーン・不快ワード完全封鎖ver） ------------------
+        # ------------------ 2通目の処理（タメ口80%：不快ワード完全封鎖の決定版仕様） ------------------
         dice_2nd = random.randint(1, 100)
         
         base_prompt_2nd = (
             f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
             f"相手の男（{user_name}さん）への『2通目』のチャットを書いてください。\n\n"
-            f"【最重要・不快ワードの絶対禁止】：相手の男（{user_name}さん）を呼ぶときは、必ず「{user_name}さん」や「{user_name}くん」と呼んでください。「お前」「貴様」「あなた」「あんた」という呼び方、および名前の「呼び捨て」は、距離感を冷めさせたり相手を不快にさせるため【絶対に禁止】とします。口裂け度もこれら禁止ワードは出力しないでください。\n"
+            f"【最重要・不快ワードの絶対禁止】：相手の男（{user_name}さん）を呼ぶときは、必ず「{user_name}さん」や「{user_name}くん」と呼んでください。「お前」「貴様」「あなた」「あんた」という呼び方、および名前の「呼び捨て」は、距離感を冷めさせたり相手を不快にさせるため【絶対に禁止】とします。口が裂けてもこれら禁止ワードは出力しないでください。\n"
             f"【最重要禁止ルール】：胸、おっぱい、爆乳、お尻、バスト、胸部といった『直接的なエロ・身体パーツ単語』は決済審査落ちを避けるため、使用を【一切禁止】とします。\n"
             f"【最重要・（笑）の完全禁止】：「笑」「（笑）」「爆笑」や、笑う絵文字（🤣😂😆😅など）は滑っている感が出るため【一切使用禁止】です。あえて真顔でサラッと言い放つ空気感にしてください。\n"
             f"【質問必須】：最後は、相手の日常を気遣う、1秒で返せる簡単な質問で必ず締めくくってください。\n"
@@ -187,4 +218,21 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
         
         # ------------------ 3通目の処理（ストイックギャップ / 質問締め強化） ------------------
         dice_3rd = random.randint(1, 100)
-        if dice
+        if dice_3rd <= 8:
+            prompt_3rd = (
+                f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・見た目:{cast['look_type']}）」です。\n"
+                f"相手の男（{user_name}さん）への3通目のチャットを書いてください。\n\n"
+                f"【条件】：普段は男に媚びていますが、実は自分の仕事（{cast['job']}）には超ストイックで真剣です。周りから怖いと言われるくらい集中しちゃうギャップを、絵文字なしの凛とした真面目なトーンで伝えてください。\n"
+                f"【質問必須】：メッセージの最後は、仕事に関する、相手が答えやすいフランクな「質問（{user_name}さんは仕事中集中すると周り見えなくなるタイプ？など）」で必ず締めくくってください。\n\n"
+                f"【絶対禁止】：「笑」「（笑）」は絶対禁止。短文で本文のみを出力。"
+            )
+            message_3rd = ask_grok_ai(prompt_3rd)
+            if not message_3rd:
+                message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
+        else:
+            message_3rd = generate_base_third_message(user_name, cast['char_type'], cast['job'])
+            
+        st.success(f"**【3通目】**\n{message_3rd}")
+        st.divider() 
+            
+    st.balloons()
