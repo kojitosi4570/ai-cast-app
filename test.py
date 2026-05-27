@@ -45,7 +45,6 @@ def get_multiple_trending_news():
     except:
         pass
     
-    # ニュースが取れなかった時のためのバックアップ
     if not news_candidates:
         news_candidates = [
             "大谷選手がまた特大ホームランを放ち驚異的な記録を更新中",
@@ -54,7 +53,6 @@ def get_multiple_trending_news():
             "今年の最新トレンドファッションや注目ブランドが発表"
         ]
     
-    # 上位8件のニュースをテキストの箇条書きにしてAIに選ばせる
     return "\n".join([f"- {title}" for title in news_candidates[:8]])
 
 # =====================================================================
@@ -65,13 +63,19 @@ def generate_base_first_message(user_name, look_type):
         return f"「はじめましてー！マッチありがとう✨ {user_name}さんって普段どのへんで飲むことが多いですかー？」"
     return f"「はじめまして！マッチできて嬉しいです✨ {user_name}さんは普段どのへんで遊ぶことが多いんですか？」"
 
+# 2通目のベース（万が一AIが落ちたときの保険）
+def generate_base_second_message(user_name, char_type):
+    if "甘え" in char_type or "愛され" in char_type:
+        return f"「{user_name}さん、今日もお仕事本当にお疲れ様ですっ🥺✨ 毎日がんばってて偉すぎます…！無理しすぎないで、たまには私に甘えてくださいね？応援してますお兄ちゃん！」"
+    return f"「お仕事お疲れ様です！日々バタバタだと突っ走りたくなっちゃうけど、たまには息抜きも必要ですよ。{user_name}さんがホッとできるようなお喋りができたら嬉しいです。無理せず自分のペースでね」"
+
 def generate_base_third_message(user_name, char_type, job):
     if "愛され" in char_type or "マシュマロ" in char_type:
         return f"「え〜！そんな美味しいお店あるんですか？今度絶対そこに連れていってくださいねっ！おねだりです、約束ですよ？あ、大変！先輩に呼ばれちゃいました💦 またすぐお話ししてくださいね！」"
     return f"「あ、いいですね！焼き鳥とかめっちゃ好きです。\nあ、やばい、今からミーティングだったの忘れてた💦 ちょっと行ってきます！\n仕事だるいしサボっちゃいたいなー。{user_name}さんは今日仕事サボったりしてないですか？」"
 
 # =====================================================================
-# 4. 【AI文章生成層】GrokのAPIを呼び出す
+# 4. 【AI文章生成層】GrokのAPIを呼び出す（安全のための1.5秒ブレーキ入り）
 # =====================================================================
 def ask_grok_ai(prompt):
     time.sleep(1.5)
@@ -111,21 +115,19 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
         
     news_list_text = get_multiple_trending_news()
 
-    # ★ここから「生成中...」の文字を完全に撤去し、スマートに出現するよう修正しました！
     for cast in casts[:4]:  
         st.subheader(f"👩‍🦰 {cast['name']} ({cast['age']}歳 / {cast['job']} / {cast['look_type']})")
         
-        # ------------------ 1通目の処理（職業×ニュース自動連動） ------------------
+        # ------------------ 1通目の処理（ニュース確率 50% へUP！） ------------------
         dice_1st = random.randint(1, 100)
-        if dice_1st <= 20:
+        if dice_1st <= 50:  # ★確率を50%に変更しました
             prompt_1st = (
                 f"あなたはマッチングアプリにいる実在の女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
                 f"相手の男（{user_name}さん）へのフランクな最初のメッセージを1通だけ書いてください。\n\n"
                 f"【最重要ルール】：\n"
                 f"以下の最新ニュースのリストから、あなたの「職業」や「年齢」に最も関わりが深く、会話として出しても不自然じゃない話題を『1つだけ』あなたの意思で選んで、チャットの中に自然に混ぜてください。\n"
-                f"例えば、IT系なら経済や技術系、大学生ならエンタメやトレンド、といったように親和性の高いものを結びつけてください。\n\n"
                 f"【最新ニュースリスト】:\n{news_list_text}\n\n"
-                f"【絶対禁止】：サクラっぽくなるので「笑」や「（笑空間）」は一切使わないでください。短文でメッセージ本文のみをスマートに出力してください。"
+                f"【絶対禁止】：サクラっぽくなるので「笑」や「（笑）」は一切使わないでください。短文でメッセージ本文のみをスマートに出力してください。"
             )
             message_1st = ask_grok_ai(prompt_1st)
             if not message_1st:
@@ -134,6 +136,21 @@ if st.button("▶︎ AIチャットを生成する", type="primary"):
             message_1st = generate_base_first_message(user_name, cast['look_type'])
             
         st.info(f"**【1通目】**\n{message_1st}")
+        
+        # ------------------ 新設！ 2通目の処理（ユーザーのメンタル完全肯定型） ------------------
+        # 2通目はユーザーが一番求めている「男を最高に気持ちよくする文章」をAIが毎回オーダーメイド
+        prompt_2nd = (
+            f"あなたはマッチングアプリの女の子「{cast['name']}（{cast['age']}歳・職業:{cast['job']}・性格:{cast['char_type']}）」です。\n"
+            f"相手の男（{user_name}さん）への『2通目』のチャットを書いてください。\n\n"
+            f"【目的】：男が一番求めている、メンタルを包み込むような最高の癒やしを提供します。\n"
+            f"【内容】：相手の日常や仕事の疲れを完璧に肯定し、共感し、「あなたって本当にがんばってて偉い、尊敬しちゃう」というニュアンスを、あなたのキャラクター（{cast['char_type']}）全開の口調で、最高に気持ちいい文章にして1通だけ出力してください。\n"
+            f"【絶対禁止】：「笑」や「（笑）」は絶対禁止。短文で本文のみを出力。"
+        )
+        message_2nd = ask_grok_ai(prompt_2nd)
+        if not message_2nd:
+            message_2nd = generate_base_second_message(user_name, cast['char_type'])
+            
+        st.warning(f"**【2通目（メンタルケア）】**\n{message_2nd}")
         
         # ------------------ 3通目の処理 ------------------
         dice_3rd = random.randint(1, 100)
