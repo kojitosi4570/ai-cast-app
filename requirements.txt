@@ -2,3 +2,4 @@ pandas
 requests
 streamlit
 python-dotenv
+stripe
