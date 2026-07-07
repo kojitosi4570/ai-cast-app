@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 # 📡 1. .env からAPIキーを自動読み込み
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY") # 💳 追加：StripeのAPIキー
 
 CAST_DATA_PATH = "cast_prompts_data.json"
 IMAGE_DIR = "AIキャスト画像"
@@ -18,10 +19,10 @@ DB_PATH = "himakano.db"  # 💾 データベース
 # 👑 ===================================================================
 # 📝 【社長用・設定欄】本番時の運営者情報をここに書くだけで自動反映されます！
 # ＝====================================================================
-COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名（法人名など）
-REPRESENTATIVE = "小嶋俊成"  # 運営責任者名
-ADDRESS = "神奈川県川崎市中原区丸子通2丁目680番地REVE502"  # 所在地
-CONTACT_EMAIL = "kojimakikaku69@outlook.jp"  # 問い合わせ先メール
+COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名
+REPRESENTATIVE = "小嶋"  # 運営責任者名
+ADDRESS = "神奈川県川崎市中原区..."  # 所在地
+CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
 # =====================================================================
 
 # 📱 スマホ専用画面に最適化
@@ -49,6 +50,14 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+# Stripeライブラリの読み込み（インストールされていない場合はダミーで対応）
+try:
+    import stripe
+    if STRIPE_SECRET_KEY:
+        stripe.api_key = STRIPE_SECRET_KEY
+except ImportError:
+    stripe = None
 
 
 # =====================================================================
@@ -118,6 +127,7 @@ def upgrade_guest_to_premium(guest_id, email, password):
         
     password_hash = make_password_hash(password)
     
+    # ゲストIDを正規メールアドレスに書き換え（履歴を引き継いでプレミアム化）
     cursor.execute("UPDATE users SET user_id = ?, password_hash = ?, is_premium = 1, is_guest = 0 WHERE user_id = ?", (email, password_hash, guest_id))
     cursor.execute("UPDATE chat_counts SET user_id = ? WHERE user_id = ?", (email, guest_id))
     cursor.execute("UPDATE chat_messages SET user_id = ? WHERE user_id = ?", (email, guest_id))
@@ -136,6 +146,15 @@ def get_user_premium(user_id):
     if row:
         return bool(row["is_premium"])
     return False
+
+
+def set_user_premium_direct(user_id, is_premium):
+    """ユーザーのプレミアムステータスを直接更新します（決済完了確認用）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET is_premium = ? WHERE user_id = ?", (int(is_premium), user_id))
+    conn.commit()
+    conn.close()
 
 
 def get_chat_count(user_id, cast_id):
@@ -282,10 +301,9 @@ def load_all_casts():
 
 
 # =====================================================================
-# ⚖️ 法的表示用の開閉アコーディオン表示関数（ログイン前・チャット最下部共通）
+# ⚖️ 法的表示用の開閉アコーディオン表示関数（月額300円仕様）
 # =====================================================================
 def render_legal_documents():
-    """審査員とユーザーがいつでも確認できる、特商法・規約の開閉アコーディオンを表示します"""
     st.markdown("---")
     col1, col2 = st.columns(2)
     
@@ -305,11 +323,11 @@ def render_legal_documents():
             {CONTACT_EMAIL}
             
             **【販売価格】**
-            月額 500円（税込）
+            月額 300円（税込）
             
             **【対価の支払時期・方法】**
             支払時期：登録時、および翌月以降の自動更新時
-            支払方法：クレジットカード決済
+            支払方法：クレジットカード決済（Stripe）
             
             **【役務の提供時期】**
             決済手続き完了後、即時にご利用可能
@@ -330,23 +348,64 @@ def render_legal_documents():
             2. 本サービスは実在する人物との1対1の出会いを提供するマッチングアプリではなく、サクラや人間が偽ってメッセージを送る詐欺行為も一切排除しています。
             
             **第3条（プレミアム会員）**
-            お試し無料回数（3往復）を超えてお喋りを楽しむ場合、月額500円（税込）のプレミアム会員プランへのご登録が必要です。
+            お試し無料回数（7往復）を超えてお喋りを楽しむ場合、月額300円（税込）のプレミアム会員プランへのご登録が必要です。
             
-            **第4. 禁止事項**
+            **第4条（禁止事項）**
             不自然な嫌がらせ、不正利用、他者へのアカウント譲渡行為は一律禁止いたします。
             """)
 
 
 # =====================================================================
-# 6. 🎨 Streamlit 画面表示・メインロジック
+# 💳 Stripe Checkout 決済セッション作成関数
+# =====================================================================
+def create_stripe_checkout_session(user_id):
+    """Stripe社が用意する安全な公式クレジットカード決済ページ（月額300円サブスク）のURLを生成します"""
+    if not stripe or not STRIPE_SECRET_KEY:
+        st.error("⚠️ StripeのAPIキーが登録されていないか、ライブラリがインストールされていません。")
+        return None
+        
+    try:
+        # ご自身のドメインを自動検出（ローカルでも本番URLでも自動で戻ってこられる設定）
+        base_url = "https://ai-cast-app.onrender.com"  # 本番のRenderアドレス
+        
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'jpy',
+                    'product_data': {
+                        'name': 'プレミアムプラン（お喋り無制限）',
+                        'description': 'AIキャストたちと制限なしで自由にお喋りを楽しめます。',
+                    },
+                    'unit_amount': 300, # 💰 月額300円に設定
+                    'recurring': {
+                        'interval': 'month', # サブスクリプション（月額課金）
+                    },
+                },
+                'quantity': 1,
+            }],
+            mode='subscription',
+            # 決済成功・キャンセル時に戻ってくるページURL
+            success_url=f"{base_url}/?session_id={{CHECKOUT_SESSION_ID}}&user_id_verify={user_id}",
+            cancel_url=f"{base_url}/",
+        )
+        return session.url
+    except Exception as e:
+        st.error(f"❌ Stripeセッション作成失敗: {e}")
+        return None
+
+
+# =====================================================================
+# 5. 🎨 Streamlit 画面表示（スマホ縦画面完全特化）
 # =====================================================================
 def main():
     if not API_KEY:
-        st.error("🔑 .env から APIキーが読み込めていません。")
+        st.error("🔑 .env から APIキー（GEMINI_API_KEY）が読み込めていません。")
         st.stop()
 
     init_db()
 
+    # 1. 🔑 お試し用のゲストアカウント
     if "guest_id" not in st.session_state:
         st.session_state.guest_id = "guest_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
         
@@ -357,6 +416,26 @@ def main():
         st.session_state.active_user_id = GUEST_ID
 
     USER_ID = st.session_state.active_user_id
+
+    # 💳 2. 【Stripe連動処理】Stripeでの決済完了後に戻ってきたときの自動昇格処理
+    query_params = st.query_params
+    if "session_id" in query_params and "user_id_verify" in query_params:
+        session_id = query_params["session_id"]
+        user_verify = query_params["user_id_verify"]
+        
+        # Stripeで本当に支払いが終わっているか自動チェック
+        if stripe:
+            try:
+                checkout_session = stripe.checkout.Session.retrieve(session_id)
+                if checkout_session.payment_status == "paid":
+                    set_user_premium_direct(user_verify, True)
+                    st.session_state.active_user_id = user_verify
+                    st.success("🎉 お支払いが確認できました！プレミアム会員として無制限にお喋りをお楽しみください！")
+                    # URLパラメータを綺麗にクリア
+                    st.query_params.clear()
+                    st.rerun()
+            except Exception as e:
+                st.error(f"決済の検証中にエラーが発生しました: {e}")
 
     casts = load_all_casts()
     if not casts:
@@ -379,7 +458,7 @@ def main():
         save_chat_message(USER_ID, cast_id, "model", cast["first_message"])
         chat_history = get_chat_history(USER_ID, cast_id)
 
-    # 👑 キャスト写真・プロフィール表示（警告の出ない安全な書き方に統一）
+    # 👑 キャスト写真・プロフィールのコンパクト表示
     col1, col2 = st.columns([1, 1.8])
     with col1:
         img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
@@ -404,8 +483,8 @@ def main():
 
     st.markdown("---")
 
-    # 🚨 3. 3往復制限＆スマホ用会員登録・デモ決済フォーム
-    if current_count >= 3 and not is_premium:
+    # 🚨 3. 7往復制限＆スマホ用会員登録・Stripe決済フォーム
+    if current_count >= 7 and not is_premium: # 🟢 7往復制限に変更
         st.warning("🔒 続きを話すにはプレミアム会員への登録が必要です。")
         
         st.markdown(
@@ -415,7 +494,7 @@ def main():
                 <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
                     月額プレミアムプランに登録して、結愛ちゃんたちと無制限にチャットを楽しみましょう！
                 </p>
-                <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 500円（税込）</h4>
+                <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 300円（税込）</h4> <!-- 🟢 300円に変更 -->
             </div>
             """,
             unsafe_allow_html=True
@@ -424,17 +503,30 @@ def main():
         reg_email = st.text_input("メールアドレス", placeholder="your-email@example.com")
         reg_password = st.text_input("パスワード", type="password", placeholder="6文字以上のパスワード")
         
-        if st.button("👑 アカウント登録 ＆ クレジットカード決済（デモ）", type="primary", use_container_width=True):
+        # 💳 Stripeでの実際のテストクレジットカード購入ボタン
+        if st.button("💳 アカウント登録 ＆ クレジットカードで購入する（月額300円）", type="primary", use_container_width=True):
             if not reg_email or not reg_password:
                 st.error("⚠️ メールアドレスとパスワードを入力してください。")
             elif len(reg_password) < 6:
                 st.error("⚠️ パスワードは6文字以上で設定してください。")
             else:
+                # 1. まずデータベースに正規ユーザー（未課金）として登録/移行
                 success, msg = upgrade_guest_to_premium(USER_ID, reg_email, reg_password)
                 if success:
                     st.session_state.active_user_id = reg_email
-                    st.success(msg)
-                    st.rerun()
+                    
+                    # 2. Stripeの決済用セッションURLを作成
+                    if STRIPE_SECRET_KEY:
+                        checkout_url = create_stripe_checkout_session(reg_email)
+                        if checkout_url:
+                            st.success("🎉 アカウントを作成しました！Stripeの決済ページへ移動します...")
+                            # 3. Stripeの安全な外部決済ページへ、ブラウザをリダイレクト（移動）させます！
+                            st.markdown(f'<a href="{checkout_url}" target="_self" style="display:inline-block; background-color:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold; width:100%; text-align:center;">💳 今すぐ決済を完了する</a>', unsafe_allow_html=True)
+                    else:
+                        # Stripeのキーがない場合は、デモ決済としてそのまま登録
+                        set_user_premium_direct(reg_email, True)
+                        st.success("🎉 アカウントを作成しました！(Stripeのキーがないためデモとしてプレミアム昇格させました)")
+                        st.rerun()
                 else:
                     st.error(msg)
                     
@@ -473,7 +565,7 @@ def main():
             save_chat_message(USER_ID, cast_id, "model", reply)
             st.rerun()
 
-    # ⚖️ スマホ最下部に、邪魔にならないクリーンなデザインで「規約・特商法」を常設表示
+    # ⚖️ スマホ最下部に、邪魔にならないクリーンなデザインで「規約・特商法（月額300円仕様）」を表示
     render_legal_documents()
 
     # 🛠️ 開発者用テストリセットツール
