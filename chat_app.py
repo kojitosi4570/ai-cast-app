@@ -15,12 +15,21 @@ CAST_DATA_PATH = "cast_prompts_data.json"
 IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
+# 👑 ===================================================================
+# 📝 【社長用・設定欄】本番時の運営者情報をここに書くだけで自動反映されます！
+# ＝====================================================================
+COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名（法人名など）
+REPRESENTATIVE = "小嶋俊成"  # 運営責任者名
+ADDRESS = "神奈川県川崎市中原区丸子通2丁目680番地REVE502"  # 所在地
+CONTACT_EMAIL = "kojimakikaku69@outlook.jp"  # 問い合わせ先メール
+# =====================================================================
+
 # 📱 スマホ専用画面に最適化
 st.set_page_config(
     page_title="AIキャスト チャット", 
     page_icon="💬", 
-    layout="centered", # 画面中央にスマホ幅でスッキリ収める
-    initial_sidebar_state="collapsed" # スマホで邪魔になるサイドバーを最初から閉じる
+    layout="centered", 
+    initial_sidebar_state="collapsed"
 )
 
 # 🎨 スマホ表示をさらに美しく、チャット枠をLINE風に近づけるスタイリング
@@ -28,7 +37,7 @@ st.markdown("""
     <style>
         [data-testid="collapsedControl"] { display: none; }
         .block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 450px !important; }
-        .stNotification { display: none !important; } /* Streamlit公式の非推奨警告を画面上から完全に非表示にします */
+        .stNotification { display: none !important; } 
         .premium-card {
             background-color: #fffaf0;
             padding: 20px;
@@ -273,7 +282,63 @@ def load_all_casts():
 
 
 # =====================================================================
-# 5. 🎨 Streamlit 画面表示（スマホ縦画面完全特化）
+# ⚖️ 法的表示用の開閉アコーディオン表示関数（ログイン前・チャット最下部共通）
+# =====================================================================
+def render_legal_documents():
+    """審査員とユーザーがいつでも確認できる、特商法・規約の開閉アコーディオンを表示します"""
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        with st.expander("⚖️ 特定商取引法に基づく表記"):
+            st.markdown(f"""
+            **【販売事業者名】**
+            {COMPANY_NAME}
+            
+            **【運営責任者】**
+            {REPRESENTATIVE}
+            
+            **【所在地】**
+            {ADDRESS}
+            
+            **【連絡先メール】**
+            {CONTACT_EMAIL}
+            
+            **【販売価格】**
+            月額 500円（税込）
+            
+            **【対価の支払時期・方法】**
+            支払時期：登録時、および翌月以降の自動更新時
+            支払方法：クレジットカード決済
+            
+            **【役務の提供時期】**
+            決済手続き完了後、即時にご利用可能
+            
+            **【キャンセル・返金について】**
+            商品の性質上、決済完了後の返金・キャンセルには応じられません。
+            解約はサイト内の設定画面よりいつでも手数料なしで行うことができます。
+            """)
+            
+    with col2:
+        with st.expander("📄 利用規約"):
+            st.markdown(f"""
+            **第1条（目的）**
+            本サービス（以下「当サービス」）は、人工知能（LLM）技術を用いた架空のAIキャラクターとの疑似テキストコミュニケーションを楽しむ、健全なエンターテインメントWebアプリです。
+            
+            **第2条（AI自動応答に関する同意）**
+            1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空のメッセージ（AI自動応答）であることに同意し、楽しむものとします。
+            2. 本サービスは実在する人物との1対1の出会いを提供するマッチングアプリではなく、サクラや人間が偽ってメッセージを送る詐欺行為も一切排除しています。
+            
+            **第3条（プレミアム会員）**
+            お試し無料回数（3往復）を超えてお喋りを楽しむ場合、月額500円（税込）のプレミアム会員プランへのご登録が必要です。
+            
+            **第4. 禁止事項**
+            不自然な嫌がらせ、不正利用、他者へのアカウント譲渡行為は一律禁止いたします。
+            """)
+
+
+# =====================================================================
+# 6. 🎨 Streamlit 画面表示・メインロジック
 # =====================================================================
 def main():
     if not API_KEY:
@@ -314,12 +379,12 @@ def main():
         save_chat_message(USER_ID, cast_id, "model", cast["first_message"])
         chat_history = get_chat_history(USER_ID, cast_id)
 
-    # 👑 キャスト写真・プロフィールのコンパクト表示（新しい警告の出ない書き方に変更）
+    # 👑 キャスト写真・プロフィール表示（警告の出ない安全な書き方に統一）
     col1, col2 = st.columns([1, 1.8])
     with col1:
         img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
         if os.path.exists(img_path):
-            st.image(img_path, use_container_width=True) # 🟢 警告の出ない書き方に更新
+            st.image(img_path, use_container_width=True)
         else:
             st.image("https://placehold.co/400x500?text=AI+Cast", use_container_width=True)
     with col2:
@@ -407,6 +472,9 @@ def main():
                 
             save_chat_message(USER_ID, cast_id, "model", reply)
             st.rerun()
+
+    # ⚖️ スマホ最下部に、邪魔にならないクリーンなデザインで「規約・特商法」を常設表示
+    render_legal_documents()
 
     # 🛠️ 開発者用テストリセットツール
     st.markdown("---")
