@@ -17,12 +17,12 @@ IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
 # 👑 ===================================================================
-# 📝 【運営者情報・設定欄】後からいつでもここを書き換えて本番審査に提出できます
+# 📝 【運営者情報・設定欄】
 # ＝====================================================================
-COMPANY_NAME = "合同会社小嶋企画"  # 販売事業者名
-REPRESENTATIVE = "小嶋"  # 運営責任者名
-ADDRESS = "神奈川県川崎市中原区..."  # 所在地
-CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
+COMPANY_NAME = "合同会社小嶋企画"
+REPRESENTATIVE = "小嶋"
+ADDRESS = "神奈川県川崎市中原区..."
+CONTACT_EMAIL = "kojitosi4570@gmail.com"
 # =====================================================================
 
 # 📱 スマホ専用画面に最適化
@@ -33,39 +33,62 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示最適化CSS（最上部の文字の重なりを5.0remの余白で完璧に解消）
+# 🎨 スマホ表示を極限まで美しくするカスタムCSS（警告バグおよびめり込みの修正版）
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
-        .profile-card {
-            background-color: #fdfdfd;
-            padding: 16px;
-            border-radius: 16px;
+        
+        /* ① タップル風プロフィールカードの装飾 */
+        .tapple-card {
+            background-color: #ffffff;
+            border-radius: 24px;
             border: 1px solid #f0f0f0;
-            margin-top: -15px;
-            margin-bottom: 20px;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.02);
+            padding: 20px;
+            box-shadow: 0px 8px 24px rgba(0,0,0,0.04);
+            margin-bottom: 15px;
         }
-        .profile-name {
-            font-size: 21px;
+        .tapple-name {
+            font-size: 24px;
             font-weight: bold;
-            color: #222;
-            margin: 0 0 6px 0;
+            color: #111111;
+            margin-bottom: 4px;
         }
-        .profile-meta {
-            font-size: 13px;
-            color: #ff4b4b;
+        .tapple-badge {
+            display: inline-block;
+            background-color: #ff4b4b;
+            color: white;
+            font-size: 11px;
             font-weight: bold;
-            margin-bottom: 10px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
         }
-        .profile-desc {
+        .tapple-desc {
             font-size: 14px;
-            color: #444;
+            color: #444444;
             line-height: 1.6;
-            margin: 0;
         }
+
+        /* ② マッチング成立画面の演出 */
+        .match-popup {
+            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            color: white;
+            box-shadow: 0px 10px 30px rgba(255,118,140,0.3);
+            margin-bottom: 25px;
+        }
+        .match-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* ③ 通常の課金カード */
         .premium-card {
             background-color: #fffaf0;
             padding: 20px;
@@ -124,6 +147,14 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS matches (
+            user_id TEXT,
+            cast_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, cast_id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -153,10 +184,10 @@ def upgrade_guest_to_premium(guest_id, email, password):
         
     password_hash = make_password_hash(password)
     
-    # ゲストIDを正規メールアドレスに書き換え（履歴を引き継いでプレミアム化）
     cursor.execute("UPDATE users SET user_id = ?, password_hash = ?, is_premium = 1, is_guest = 0 WHERE user_id = ?", (email, password_hash, guest_id))
     cursor.execute("UPDATE chat_counts SET user_id = ? WHERE user_id = ?", (email, guest_id))
     cursor.execute("UPDATE chat_messages SET user_id = ? WHERE user_id = ?", (email, guest_id))
+    cursor.execute("UPDATE matches SET user_id = ? WHERE user_id = ?", (email, guest_id))
     
     conn.commit()
     conn.close()
@@ -182,6 +213,23 @@ def set_user_premium_direct(user_id, is_premium):
     conn.close()
 
 
+def add_match(user_id, cast_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO matches (user_id, cast_id) VALUES (?, ?)", (user_id, cast_id))
+    conn.commit()
+    conn.close()
+
+
+def get_matched_cast_ids(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT cast_id FROM matches WHERE user_id = ?", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row["cast_id"] for row in rows]
+
+
 def get_chat_count(user_id, cast_id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -205,10 +253,8 @@ def increment_chat_count(user_id, cast_id):
 
 
 def get_chat_history(user_id, cast_id):
-    """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正点：ユーザーIDとキャストIDを正しくバインディング（引き渡し）してエラーを完璧に修正
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -243,6 +289,7 @@ def clear_all_test_data():
     cursor.execute("DELETE FROM users")
     cursor.execute("DELETE FROM chat_counts")
     cursor.execute("DELETE FROM chat_messages")
+    cursor.execute("DELETE FROM matches")
     conn.commit()
     conn.close()
 
@@ -371,7 +418,7 @@ def render_legal_documents():
             本サービスは、人工知能（LLM）技術を用いた架空のAIキャラクターとの疑似テキストコミュニケーションを楽しむ、健全なエンターテインメントWebアプリです。
             
             **第2条（AI自動応答に関する同意）**
-            1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空 of メッセージ（AI自動応答）であることに同意し、楽しむものとします。
+            1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空のメッセージ（AI自動応答）であることに同意し、楽しむものとします。
             2. 本サービスは実在する人物との1対1の出会いを提供するマッチングアプリではなく、サクラや人間が偽ってメッセージを送る詐欺行為も一切排除しています。
             
             **第3条（プレミアム会員）**
@@ -420,15 +467,16 @@ def create_stripe_checkout_session(user_id):
 
 
 # =====================================================================
-# 5. 🎨 Streamlit 画面表示・メインロジック（スマホ特化＆縦型タップル風UI）
+# 5. 🎨 Streamlit 画面表示・メインロジック（スワイプ ＆ チャット横並び連動）
 # =====================================================================
 def main():
     if not API_KEY:
-        st.error("🔑 .env から APIキー（GEMINI_API_KEY）が読み込めていません。")
+        st.error("🔑 .env から APIキーが読み込めていません。")
         st.stop()
 
     init_db()
 
+    # 🔑 端末用ゲストアカウント
     if "guest_id" not in st.session_state:
         st.session_state.guest_id = "guest_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
         
@@ -440,7 +488,19 @@ def main():
 
     USER_ID = st.session_state.active_user_id
 
-    # 💳 Stripeでの決済完了確認
+    # 💾 セッションインデックスの初期化
+    if "swipe_index" not in st.session_state:
+        st.session_state.swipe_index = 0  
+    if "photo_index" not in st.session_state:
+        st.session_state.photo_index = 0  
+    if "last_matched_cast" not in st.session_state:
+        st.session_state.last_matched_cast = None  
+    if "current_tab" not in st.session_state:
+        st.session_state.current_tab = "🔍 お相手探し"
+    if "active_chat_cast_id" not in st.session_state:
+        st.session_state.active_chat_cast_id = None # チャットで現在開いている相手
+
+    # 💳 Stripe決済完了チェック
     query_params = st.query_params
     if "session_id" in query_params and "user_id_verify" in query_params:
         session_id = query_params["session_id"]
@@ -463,129 +523,274 @@ def main():
         st.warning("⚠️ キャストデータが空っぽです。")
         st.stop()
 
-    # 📱 1. 【キャスト選択】最上部ヘッダー
-    st.markdown("### 👤 キャストを選んでチャット開始")
-    cast_names = [c["name"] for c in casts]
-    selected_name = st.selectbox("", cast_names, label_visibility="collapsed")
-    
-    cast = next(c for c in casts if c["name"] == selected_name)
-    cast_id = cast["id"]
-
-    is_premium = get_user_premium(USER_ID)
-    current_count = get_chat_count(USER_ID, cast_id)
-    chat_history = get_chat_history(USER_ID, cast_id)
-
-    if not chat_history:
-        save_chat_message(USER_ID, cast_id, "model", cast["first_message"])
-        chat_history = get_chat_history(USER_ID, cast_id)
-
-    # 👑 2. 【タップル風・スマホ最適化縦型ヒーロー表示】
-    # 最上部に女の子の写真を「横幅100%（縦長）」で大きく配置
-    img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
-    if os.path.exists(img_path):
-        st.image(img_path, use_container_width=True)
-    else:
-        st.image("https://placehold.co/400x500?text=AI+Cast+Image", use_container_width=True)
-
-    # 写真のすぐ下に、名前、年齢、職業、プロファイルをすっきり配置
-    st.markdown(f"""
-        <div class="profile-card">
-            <div class="profile-name">{cast['name']}</div>
-            <div class="profile-meta">{cast['age']}歳 &nbsp;•&nbsp; {cast['job']}</div>
-            <p class="profile-desc">{cast['profile_text']}</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # 💬 3. LINE風チャット履歴
-    for msg in chat_history:
-        if msg["role"] == "user":
-            with st.chat_message("user"):
-                st.write(msg["text"])
-        else:
-            with st.chat_message("assistant"):
-                st.write(msg["text"])
-
-    st.markdown("---")
-
-    # 🚨 4. 7往復制限 ＆ Stripeサブスク決済フォーム
-    if current_count >= 7 and not is_premium:
-        st.warning("🔒 続きを話すにはプレミアム会員への登録が必要です。")
-        
-        st.markdown(
-            """
-            <div class="premium-card">
-                <h3 style="color: #b8860b; margin-top: 0; font-size: 18px;">👑 プレミアム会員になってお喋りを続けよう！</h3>
-                <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
-                    月額プレミアムプランに登録して、結愛ちゃんたちと無制限にチャットを楽しみましょう！
-                </p>
-                <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 300円（税込）</h4>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        reg_email = st.text_input("メールアドレス", placeholder="your-email@example.com")
-        reg_password = st.text_input("パスワード", type="password", placeholder="6文字以上のパスワード")
-        
-        if st.button("💳 アカウント登録 ＆ クレジットカードで購入する（月額300円）", type="primary", use_container_width=True):
-            if not reg_email or not reg_password:
-                st.error("⚠️ メールアドレスとパスワードを入力してください。")
-            elif len(reg_password) < 6:
-                st.error("⚠️ パスワードは6文字以上で設定してください。")
-            else:
-                success, msg = upgrade_guest_to_premium(USER_ID, reg_email, reg_password)
-                if success:
-                    st.session_state.active_user_id = reg_email
-                    if STRIPE_SECRET_KEY:
-                        checkout_url = create_stripe_checkout_session(reg_email)
-                        if checkout_url:
-                            st.success("🎉 アカウントを作成しました！Stripeの決済ページへ移動します...")
-                            st.markdown(f'<a href="{checkout_url}" target="_self" style="display:inline-block; background-color:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold; width:100%; text-align:center;">💳 今すぐ決済を完了する</a>', unsafe_allow_html=True)
-                    else:
-                        set_user_premium_direct(reg_email, True)
-                        st.success("🎉 アカウントを作成しました！")
-                        st.rerun()
-                else:
-                    st.error(msg)
-                    
-    else:
-        if user_msg := st.chat_input("メッセージを送る..."):
-            save_chat_message(USER_ID, cast_id, "user", user_msg)
-            
-            if not is_premium:
-                increment_chat_count(USER_ID, cast_id)
-
-            clean_profile = cast['profile_text']
-            clean_profile = clean_profile.replace("エロい", "魅力的な").replace("お胸", "抜群のスタイル").replace("下心", "関心")
-
-            updated_history = get_chat_history(USER_ID, cast_id)
-
-            system_instruction = f"""
-            あなたはキャスト「{cast['name']}」（年齢: {cast['age']}歳、職業: {cast['job']}）という日本の実在する女性本人です。
-            マッチング相手の男性とスマートフォンで優しく、お喋りを盛り上げる会話をしています。
-            
-            【あなたのプロフィール】
-            {clean_profile}
-            ・愛嬌がたっぷりあってお喋りが大好き、少しあざとくて男性の心を惹きつけるのが上手な魅力的な女性です。
-
-            【絶対に守る会話のルール】
-            1. あなたは実在する女性です。AI、LLM、自動応答、テンプレといった、機械的な存在を想起させるセリフは一律で完全禁止です。
-            2. 丁寧で上品でありながら、親しみやすさを織り交ぜた優しい敬語（〜ですね、〜ですか？など）で接してください（タメ口は一律禁止です）。
-            3. 「（笑）」や「笑」、「w」などのネット表現はサクラ感が出るため【一律で使用禁止】です。楽しさを表現する際は、自然な絵文字（😊、✨、♪）をメッセージに1〜2個程度、優しく落とすように使ってください。
-            4. 相手の直前の発言を完璧に理解し、それに対するあなた自身の具体的な感想や共感、お茶目なリアクションを必ず1〜2文入れて返答してください。一言だけの淡白な返信は絶対にしないでください。
-            5. 会話を一方的に受け止めて終わらせるのではなく、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
-            6. 返答は、スマホのチャット画面で最も読みやすい【120文字前後（3〜4文程度）】に整え、必ず文章の最後まで途切れることなく完結させて出力してください。
-            """
-
-            with st.spinner(f"{cast['name']}が入力中..."):
-                reply = call_gemini_chat_engine(system_instruction, updated_history)
-                
-            save_chat_message(USER_ID, cast_id, "model", reply)
+    # 📱 画面の切り替えタブ
+    st.write(" ")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        if st.button("🔍 お相手を探す", use_container_width=True, type="primary" if st.session_state.current_tab == "🔍 お相手探し" else "secondary"):
+            st.session_state.current_tab = "🔍 お相手探し"
+            st.rerun()
+    with col_t2:
+        if st.button("💬 やりとり（チャット）", use_container_width=True, type="primary" if st.session_state.current_tab == "💬 やりとり" else "secondary"):
+            st.session_state.current_tab = "💬 やりとり"
             st.rerun()
 
-    # ⚖️ スマホ最下部に法的表示のアコーディオンを配置
+    # 💓 1. マッチング成立お祝いポップアップ演出
+    if st.session_state.last_matched_cast:
+        matched_cast = st.session_state.last_matched_cast
+        
+        st.markdown(f"""
+            <div class="match-popup">
+                <div class="match-title">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        col_p1, col_p2, col_p3 = st.columns([1, 0.8, 1])
+        with col_p1:
+            st.image("https://placehold.co/150x150/1e88e5/ffffff?text=YOU", use_container_width=True, caption="あなた")
+        with col_p2:
+            st.markdown("<h1 style='text-align:center; color:#ff4b4b; padding-top:20px;'>❤️</h1>", unsafe_allow_html=True)
+        with col_p3:
+            img_path = os.path.join(IMAGE_DIR, matched_cast['id'], f"{matched_cast['id']}_photo_1_main.png")
+            if os.path.exists(img_path):
+                st.image(img_path, use_container_width=True, caption=matched_cast['name'])
+            else:
+                st.image("https://placehold.co/150x150?text=AI+Cast", use_container_width=True, caption=matched_cast['name'])
+                
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button(f"💬 {matched_cast['name']}ちゃんにメッセージを送る", type="primary", use_container_width=True):
+            st.session_state.current_tab = "💬 やりとり"
+            st.session_state.last_matched_cast = None
+            st.session_state.active_chat_cast_id = matched_cast['id'] # 選択されたキャストを指定
+            st.rerun()
+            
+        if st.button("✕ 他のお相手も探す", use_container_width=True):
+            st.session_state.last_matched_cast = None
+            st.rerun()
+            
+        return
+
+
+    # 💓 2. 【🔍 お相手を探す】スワイプ画面の実装
+    if st.session_state.current_tab == "🔍 お相手探し":
+        st.markdown("### 🔍 好みのAIキャストを見つけよう！")
+        
+        # お好み詳細検索
+        with st.expander("⚙️ お好み詳細検索（年齢・地域で絞り込み）"):
+            filter_age = st.slider("年齢層の選択", 18, 45, (18, 35))
+            filter_region = st.selectbox("探したい地域", ["制限なし（関東・東京エリア）", "東京（元住吉周辺など含む）", "神奈川"])
+            
+        filtered_casts = []
+        for c in casts:
+            if filter_age[0] <= c["age"] <= filter_age[1]:
+                filtered_casts.append(c)
+            
+        if not filtered_casts:
+            st.info("条件に一致するお相手が現在見つかりません。")
+            return
+            
+        if st.session_state.swipe_index >= len(filtered_casts):
+            st.session_state.swipe_index = 0
+            
+        active_cast = filtered_casts[st.session_state.swipe_index]
+        c_id = active_cast["id"]
+        
+        # 5枚のスライド画像
+        photo_paths = [
+            os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_1_main.png"),
+            os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_2_sub.png"),
+            os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_3_sub.png"),
+            os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_4_sub.png"),
+            os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_5_sub.png")
+        ]
+        
+        current_img = photo_paths[st.session_state.photo_index]
+        if os.path.exists(current_img):
+            st.image(current_img, use_container_width=True)
+        else:
+            st.image(f"https://placehold.co/400x500?text=No+Photo+{st.session_state.photo_index+1}", use_container_width=True)
+            
+        col_prev, col_num, col_next = st.columns([1, 2, 1])
+        with col_prev:
+            if st.button("◀ 前の写真", use_container_width=True):
+                if st.session_state.photo_index > 0:
+                    st.session_state.photo_index -= 1
+                    st.rerun()
+        with col_num:
+            st.markdown(f"<p style='text-align:center; padding-top:6px; color:#777; font-size:13px;'>📷 写真 {st.session_state.photo_index + 1} / 5 枚目</p>", unsafe_allow_html=True)
+        with col_next:
+            if st.button("写真の次 ▶", use_container_width=True):
+                if st.session_state.photo_index < 4:
+                    st.session_state.photo_index += 1
+                    st.rerun()
+
+        st.markdown(f"""
+            <div class="tapple-card">
+                <div class="tapple-name">{active_cast['name']} ({active_cast['age']}歳)</div>
+                <div class="tapple-badge">💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉（神奈川）周辺</div>
+                <p class="tapple-desc">{active_cast['profile_text']}</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("❌ イマイチ（次に進む）", use_container_width=True):
+                st.session_state.swipe_index += 1
+                st.session_state.photo_index = 0
+                st.rerun()
+        with col_b2:
+            if st.button("❤️ いいかも！（マッチングする）", use_container_width=True, type="primary"):
+                add_match(USER_ID, c_id)
+                st.session_state.last_matched_cast = active_cast
+                st.rerun()
+
+
+    # 💬 3. 【やり取り（チャット）】画面（新：横並び写真アイコン一覧対応！）
+    elif st.session_state.current_tab == "💬 やりとり":
+        matched_ids = get_matched_cast_ids(USER_ID)
+        
+        if not matched_ids:
+            st.info("💡 まだマッチングしているお相手がいません。")
+            st.write("上の「🔍 お相手を探す」タブから、気になるお相手をスワイプして『いいかも！』してみましょう！")
+            return
+            
+        matched_casts = [c for c in casts if c["id"] in matched_ids]
+        
+        # 👑 【新機能：丸型お相手写真アイコンの横並び選択UI】
+        st.markdown("### 👥 マッチング中のお相手")
+        
+        if st.session_state.active_chat_cast_id not in matched_ids:
+            st.session_state.active_chat_cast_id = matched_ids[0]
+            
+        # カラムを横に分割して、写真を丸く並べる (最大4カラム)
+        num_cols = min(len(matched_casts), 4)
+        cols = st.columns(num_cols)
+        
+        for idx, m_cast in enumerate(matched_casts[:4]):
+            with cols[idx]:
+                # 写真のパス取得
+                img_path = os.path.join(IMAGE_DIR, m_cast["id"], f"{m_cast['id']}_photo_1_main.png")
+                
+                # Streamlitの機能で、お相手の写真、またはダミーをコンパクトに表示
+                if os.path.exists(img_path):
+                    st.image(img_path, width=75)
+                else:
+                    st.image("https://placehold.co/75x75?text=AI", width=75)
+                
+                # ポチッと選択するボタン
+                is_active = (st.session_state.active_chat_cast_id == m_cast["id"])
+                btn_style = "primary" if is_active else "secondary"
+                
+                if st.button(f"{m_cast['name']}", key=f"sel_{m_cast['id']}", type=btn_style, use_container_width=True):
+                    st.session_state.active_chat_cast_id = m_cast["id"]
+                    st.rerun()
+                    
+        st.markdown("---")
+        
+        # チャット相手の決定
+        cast_id = st.session_state.active_chat_cast_id
+        cast = next(c for c in matched_casts if c["id"] == cast_id)
+
+        # 会話ログ等の取得
+        is_premium = get_user_premium(USER_ID)
+        current_count = get_chat_count(USER_ID, cast_id)
+        chat_history = get_chat_history(USER_ID, cast_id)
+
+        if not chat_history:
+            save_chat_message(USER_ID, cast_id, "model", cast["first_message"])
+            chat_history = get_chat_history(USER_ID, cast_id)
+
+        st.markdown(f"**💬 {cast['name']} ({cast['age']}歳 / {cast['job']}) と会話中**")
+        
+        # チャット履歴描画
+        for msg in chat_history:
+            if msg["role"] == "user":
+                with st.chat_message("user"):
+                    st.write(msg["text"])
+            else:
+                with st.chat_message("assistant"):
+                    st.write(msg["text"])
+
+        st.markdown("---")
+
+        # 🚨 7往復制限
+        if current_count >= 7 and not is_premium:
+            st.warning("🔒 続きを話すにはプレミアム会員への登録が必要です。")
+            
+            st.markdown(
+                """
+                <div class="premium-card">
+                    <h3 style="color: #b8860b; margin-top: 0; font-size: 18px;">👑 プレミアム会員になってお喋りを続けよう！</h3>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
+                        月額プレミアムプランに登録して、結愛ちゃんたちと無制限にチャットを楽しみましょう！
+                    </p>
+                    <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 300円（税込）</h4>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            reg_email = st.text_input("メールアドレス", placeholder="your-email@example.com")
+            reg_password = st.text_input("パスワード", type="password", placeholder="6文字以上のパスワード")
+            
+            if st.button("💳 アカウント登録 ＆ クレジットカードで購入する（月額300円）", type="primary", use_container_width=True):
+                if not reg_email or not reg_password:
+                    st.error("⚠️ メールアドレスとパスワードを入力してください。")
+                elif len(reg_password) < 6:
+                    st.error("⚠️ パスワードは6文字以上で設定してください。")
+                else:
+                    success, msg = upgrade_guest_to_premium(USER_ID, reg_email, reg_password)
+                    if success:
+                        st.session_state.active_user_id = reg_email
+                        if STRIPE_SECRET_KEY:
+                            checkout_url = create_stripe_checkout_session(reg_email)
+                            if checkout_url:
+                                st.success("🎉 アカウントを作成しました！Stripe of 決済ページへ移動します...")
+                                st.markdown(f'<a href="{checkout_url}" target="_self" style="display:inline-block; background-color:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold; width:100%; text-align:center;">💳 今すぐ決済を完了する</a>', unsafe_allow_html=True)
+                        else:
+                            set_user_premium_direct(reg_email, True)
+                            st.success("🎉 アカウントを作成しました！")
+                            st.rerun()
+                    else:
+                        st.error(msg)
+                        
+        else:
+            if user_msg := st.chat_input("メッセージを送る..."):
+                save_chat_message(USER_ID, cast_id, "user", user_msg)
+                
+                if not is_premium:
+                    increment_chat_count(USER_ID, cast_id)
+
+                clean_profile = cast['profile_text']
+                clean_profile = clean_profile.replace("エロい", "魅力的な").replace("お胸", "抜群のスタイル").replace("下心", "関心")
+
+                updated_history = get_chat_history(USER_ID, cast_id)
+
+                system_instruction = f"""
+                あなたはキャスト「{cast['name']}」（年齢: {cast['age']}歳、職業: {cast['job']}）という日本の実在する女性本人です。
+                マッチング相手の男性とスマートフォンで優しく、お喋りを盛り上げる会話をしています。
+                
+                【あなたのプロフィール】
+                {clean_profile}
+                ・愛嬌がたっぷりあってお喋りが大好き、少しあざとくて男性の心を惹きつけるのが上手な魅力的な女性です。
+
+                【絶対に守る会話のルール】
+                1. あなたは実在する女性です。AI、LLM、自動応答、テンプレといった、機械的な存在を想起させるセリフは一律で完全禁止です。
+                2. 丁寧で上品でありながら、親しみやすさを織り交ぜた優しい敬語（〜ですね、〜ですか？など）で接してください（タメ口は一律禁止です）。
+                3. 「（笑）」や「笑」、「w」などのネット表現はサクラ感が出るため【一律で使用禁止】です。楽しさを表現する際は、自然な絵文字（😊、✨、♪）をメッセージに1〜2個程度、優しく落とすように使ってください。
+                4. 相手の直前の発言を完璧に理解し、それに対するあなた自身の具体的な感想や共感、お茶目なリアクションを必ず1〜2文入れて返答してください。一言だけの淡白な返信は絶対にしないでください。
+                5. 会話を一方的に受け止めて終わらせるのではなく、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
+                6. 返答は、スマホのチャット画面で最も読みやすい【120文字前後（3〜4文程度）】に整え、必ず文章の最後まで途切れることなく完結させて出力してください。
+                """
+
+                with st.spinner(f"{cast['name']}が入力中..."):
+                    reply = call_gemini_chat_engine(system_instruction, updated_history)
+                    
+                save_chat_message(USER_ID, cast_id, "model", reply)
+                st.rerun()
+
+    # ⚖️ スマホ最下部に法的表示のアコーディオンを常設
     render_legal_documents()
 
     # 🛠️ 開発者用テストリセットツール
