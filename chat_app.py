@@ -2,9 +2,11 @@ import os
 import json
 import sqlite3
 import hashlib
+import base64
 import urllib.request
 import urllib.error
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 # 📡 1. .env からAPIキーを自動読み込み
@@ -33,7 +35,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくするカスタムCSS（警告バグおよびめり込みの修正版）
+# 🎨 スマホ表示を極限まで美しくするカスタムCSS（丸型グラデーションボタンの搭載）
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
@@ -46,8 +48,9 @@ st.markdown("""
             border-radius: 24px;
             border: 1px solid #f0f0f0;
             padding: 20px;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.04);
-            margin-bottom: 15px;
+            box-shadow: 0px 8px 24px rgba(0,0,0,0.03);
+            margin-top: 15px;
+            margin-bottom: 20px;
         }
         .tapple-name {
             font-size: 24px;
@@ -97,6 +100,47 @@ st.markdown("""
             text-align: center;
             margin-bottom: 20px;
             box-shadow: 0px 4px 15px rgba(0,0,0,0.05);
+        }
+
+        /* ④ ❌ と ❤️ の超洗練された丸型ベクターデザインボタン（CSSでStreamlit標準ボタンを完全上書き） */
+        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+            background-color: #ffffff !important;
+            color: #ff5252 !important;
+            font-size: 32px !important;
+            border-radius: 50% !important;
+            width: 72px !important;
+            height: 72px !important;
+            margin: 0 auto !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 1px solid #f2f2f2 !important;
+            box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
+            transition: all 0.2s ease !important;
+        }
+        div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
+            transform: scale(0.9) !important;
+            background-color: #f7f7f2 !important;
+        }
+        
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+            background: linear-gradient(135deg, #ff5252 0%, #ff7eb3 100%) !important;
+            color: #ffffff !important;
+            font-size: 32px !important;
+            border-radius: 50% !important;
+            width: 72px !important;
+            height: 72px !important;
+            margin: 0 auto !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: none !important;
+            box-shadow: 0px 8px 24px rgba(255,82,82,0.25) !important;
+            transition: all 0.2s ease !important;
+        }
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
+            transform: scale(0.9) !important;
+            opacity: 0.95 !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -352,7 +396,7 @@ def call_gemini_chat_engine(system_instruction, chat_history):
 
 
 # =====================================================================
-# 4. 👤 キャストデータの読み込み
+# 4. 👤 キャストデータの読み込み & 🖼️ 画像Base64変換（サーバー読込対策）
 # =====================================================================
 def load_all_casts():
     possible_paths = ["cast_prompts_data.json", "npc_prompts_data.json"]
@@ -372,6 +416,18 @@ def load_all_casts():
     except Exception as e:
         st.error(f"❌ JSON解析失敗: {e}")
         st.stop()
+
+
+def get_image_base64(path):
+    """Renderなどのサーバー上でiframe内に確実に画像を読み込ませるためのBase64エンコード処理"""
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            return f"data:image/png;base64,{encoded_string}"
+    except Exception:
+        return ""
 
 
 # =====================================================================
@@ -488,17 +544,15 @@ def main():
 
     USER_ID = st.session_state.active_user_id
 
-    # 💾 セッションインデックスの初期化
+    # 💾 セッション状態の初期化
     if "swipe_index" not in st.session_state:
         st.session_state.swipe_index = 0  
-    if "photo_index" not in st.session_state:
-        st.session_state.photo_index = 0  
     if "last_matched_cast" not in st.session_state:
         st.session_state.last_matched_cast = None  
     if "current_tab" not in st.session_state:
         st.session_state.current_tab = "🔍 お相手探し"
     if "active_chat_cast_id" not in st.session_state:
-        st.session_state.active_chat_cast_id = None # チャットで現在開いている相手
+        st.session_state.active_chat_cast_id = None 
 
     # 💳 Stripe決済完了チェック
     query_params = st.query_params
@@ -545,6 +599,7 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
+        # あなた（シルエット） ── (❤️) ── キャストの顔
         col_p1, col_p2, col_p3 = st.columns([1, 0.8, 1])
         with col_p1:
             st.image("https://placehold.co/150x150/1e88e5/ffffff?text=YOU", use_container_width=True, caption="あなた")
@@ -562,7 +617,7 @@ def main():
         if st.button(f"💬 {matched_cast['name']}ちゃんにメッセージを送る", type="primary", use_container_width=True):
             st.session_state.current_tab = "💬 やりとり"
             st.session_state.last_matched_cast = None
-            st.session_state.active_chat_cast_id = matched_cast['id'] # 選択されたキャストを指定
+            st.session_state.active_chat_cast_id = matched_cast['id']
             st.rerun()
             
         if st.button("✕ 他のお相手も探す", use_container_width=True):
@@ -596,7 +651,7 @@ def main():
         active_cast = filtered_casts[st.session_state.swipe_index]
         c_id = active_cast["id"]
         
-        # 5枚のスライド画像
+        # 📸 5枚の写真パスを用意してBase64化（表示のチカチカ・遅延を完全にゼロにします）
         photo_paths = [
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_1_main.png"),
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_2_sub.png"),
@@ -605,26 +660,75 @@ def main():
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_5_sub.png")
         ]
         
-        current_img = photo_paths[st.session_state.photo_index]
-        if os.path.exists(current_img):
-            st.image(current_img, use_container_width=True)
-        else:
-            st.image(f"https://placehold.co/400x500?text=No+Photo+{st.session_state.photo_index+1}", use_container_width=True)
-            
-        col_prev, col_num, col_next = st.columns([1, 2, 1])
-        with col_prev:
-            if st.button("◀ 前の写真", use_container_width=True):
-                if st.session_state.photo_index > 0:
-                    st.session_state.photo_index -= 1
-                    st.rerun()
-        with col_num:
-            st.markdown(f"<p style='text-align:center; padding-top:6px; color:#777; font-size:13px;'>📷 写真 {st.session_state.photo_index + 1} / 5 枚目</p>", unsafe_allow_html=True)
-        with col_next:
-            if st.button("写真の次 ▶", use_container_width=True):
-                if st.session_state.photo_index < 4:
-                    st.session_state.photo_index += 1
-                    st.rerun()
+        img_srcs = []
+        for p in photo_paths:
+            b64 = get_image_base64(p)
+            img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
+        # 👑 【究極進化：タップル風HTML/JSフォトスライダー】
+        # 左右タップエリアの完全対応＆上部の5本線インジケーター同期システム
+        slider_html = f"""
+        <div class="slider-wrapper" style="position: relative; width: 100%; max-width: 420px; height: 480px; border-radius: 28px; overflow: hidden; background-color: #000; box-shadow: 0px 10px 30px rgba(0,0,0,0.15); margin: 0 auto;">
+            <!-- 5本線の進捗インジケーター -->
+            <div class="indicator-bar" style="position: absolute; top: 12px; left: 0; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; padding: 0 16px; box-sizing: border-box;">
+                <div class="bar" id="b-0" style="flex: 1; height: 3px; background-color: #ffffff; border-radius: 2px; transition: all 0.2s;"></div>
+                <div class="bar" id="b-1" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
+                <div class="bar" id="b-2" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
+                <div class="bar" id="b-3" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
+                <div class="bar" id="b-4" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
+            </div>
+            
+            <!-- スライドトラック -->
+            <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);">
+                <img src="{img_srcs[0]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
+                <img src="{img_srcs[1]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
+                <img src="{img_srcs[2]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
+                <img src="{img_srcs[3]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
+                <img src="{img_srcs[4]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
+            </div>
+            
+            <!-- 左右透明なタップエリア -->
+            <div class="tap-left" onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer;"></div>
+            <div class="tap-right" onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer;"></div>
+        </div>
+        
+        <script>
+            let idx = 0;
+            const limit = 5;
+            const tr = document.getElementById('track');
+            
+            function refresh() {{
+                tr.style.transform = `translateX(${{-idx * 100}}%)`;
+                for (let i = 0; i < limit; i++) {{
+                    const bar = document.getElementById(`b-${{i}}`);
+                    if (i === idx) {{
+                        bar.style.backgroundColor = '#ffffff';
+                    }} else {{
+                        bar.style.backgroundColor = 'rgba(255,255,255,0.4)';
+                    }}
+                }}
+            }}
+            
+            function next() {{
+                if (idx < limit - 1) {{
+                    idx++;
+                    refresh();
+                }}
+            }}
+            
+            function prev() {{
+                if (idx > 0) {{
+                    idx--;
+                    refresh();
+                }}
+            }}
+        </script>
+        """
+        
+        # iframe上にスライダーを表示（高さ・余白を調整）
+        components.html(slider_html, height=490)
+
+        # 👑 タップル風プロフィールカード
         st.markdown(f"""
             <div class="tapple-card">
                 <div class="tapple-name">{active_cast['name']} ({active_cast['age']}歳)</div>
@@ -633,20 +737,20 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
+        # ❌ スキップ（バツ） と ❤️ いいね！ の丸型特製アイコンボタン
         col_b1, col_b2 = st.columns(2)
         with col_b1:
-            if st.button("❌ イマイチ（次に進む）", use_container_width=True):
+            if st.button("✕", key="skip_btn", use_container_width=True):
                 st.session_state.swipe_index += 1
-                st.session_state.photo_index = 0
                 st.rerun()
         with col_b2:
-            if st.button("❤️ いいかも！（マッチングする）", use_container_width=True, type="primary"):
+            if st.button("❤️", key="like_btn", use_container_width=True):
                 add_match(USER_ID, c_id)
                 st.session_state.last_matched_cast = active_cast
                 st.rerun()
 
 
-    # 💬 3. 【やり取り（チャット）】画面（新：横並び写真アイコン一覧対応！）
+    # 💬 3. 【やり取り（チャット）】画面
     elif st.session_state.current_tab == "💬 やりとり":
         matched_ids = get_matched_cast_ids(USER_ID)
         
@@ -657,28 +761,24 @@ def main():
             
         matched_casts = [c for c in casts if c["id"] in matched_ids]
         
-        # 👑 【新機能：丸型お相手写真アイコンの横並び選択UI】
+        # 👥 マッチング中のお相手（丸型アイコン写真の横並び選択UI）
         st.markdown("### 👥 マッチング中のお相手")
         
         if st.session_state.active_chat_cast_id not in matched_ids:
             st.session_state.active_chat_cast_id = matched_ids[0]
             
-        # カラムを横に分割して、写真を丸く並べる (最大4カラム)
         num_cols = min(len(matched_casts), 4)
         cols = st.columns(num_cols)
         
         for idx, m_cast in enumerate(matched_casts[:4]):
             with cols[idx]:
-                # 写真のパス取得
                 img_path = os.path.join(IMAGE_DIR, m_cast["id"], f"{m_cast['id']}_photo_1_main.png")
                 
-                # Streamlitの機能で、お相手の写真、またはダミーをコンパクトに表示
                 if os.path.exists(img_path):
                     st.image(img_path, width=75)
                 else:
                     st.image("https://placehold.co/75x75?text=AI", width=75)
                 
-                # ポチッと選択するボタン
                 is_active = (st.session_state.active_chat_cast_id == m_cast["id"])
                 btn_style = "primary" if is_active else "secondary"
                 
@@ -688,11 +788,10 @@ def main():
                     
         st.markdown("---")
         
-        # チャット相手の決定
         cast_id = st.session_state.active_chat_cast_id
         cast = next(c for c in matched_casts if c["id"] == cast_id)
 
-        # 会話ログ等の取得
+        # 会話ログの取得
         is_premium = get_user_premium(USER_ID)
         current_count = get_chat_count(USER_ID, cast_id)
         chat_history = get_chat_history(USER_ID, cast_id)
@@ -746,7 +845,7 @@ def main():
                         if STRIPE_SECRET_KEY:
                             checkout_url = create_stripe_checkout_session(reg_email)
                             if checkout_url:
-                                st.success("🎉 アカウントを作成しました！Stripe of 決済ページへ移動します...")
+                                st.success("🎉 アカウントを作成しました！Stripeの決済ページへ移動します...")
                                 st.markdown(f'<a href="{checkout_url}" target="_self" style="display:inline-block; background-color:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold; width:100%; text-align:center;">💳 今すぐ決済を完了する</a>', unsafe_allow_html=True)
                         else:
                             set_user_premium_direct(reg_email, True)
@@ -790,7 +889,7 @@ def main():
                 save_chat_message(USER_ID, cast_id, "model", reply)
                 st.rerun()
 
-    # ⚖️ スマホ最下部に法的表示のアコーディオンを常設
+    # ⚖️ スマホ最下部に法的表示のアコーディオンを配置
     render_legal_documents()
 
     # 🛠️ 開発者用テストリセットツール
