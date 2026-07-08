@@ -19,12 +19,12 @@ IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
 # 👑 ===================================================================
-# 📝 【運営者情報・設定欄】
+# 📝 【運営者情報・設定欄】後からいつでもここを書き換えて本番審査に提出できます
 # =====================================================================
-COMPANY_NAME = "合同会社小嶋企画"
-REPRESENTATIVE = "小嶋"
-ADDRESS = "神奈川県川崎市中原区..."
-CONTACT_EMAIL = "kojitosi4570@gmail.com"
+COMPANY_NAME = "合同会社小嶋企画"  # 販売事業者名
+REPRESENTATIVE = "小嶋"  # 運営責任者名
+ADDRESS = "神奈川県川崎市中原区..."  # 所在地
+CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
 # =====================================================================
 
 # 📱 スマホ専用画面に最適化
@@ -35,7 +35,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS
+# 🎨 タップルを完全トレースする最高峰カスタムCSS（高精細SVGボタン＆位置調整）
 st.markdown("""
     <style>
         /* 不要なStreamlit純正UIをシャットアウト */
@@ -50,7 +50,7 @@ st.markdown("""
             align-items: center !important;
         }
 
-        /* ❌ スキップボタン：文字を透明にし、高精細な細線SVGのバツマークを背景として描画 */
+        /* ❌ スキップボタン：文字を透明にし、高精細な細線SVGのバツマークを背景として直接描画 */
         div[data-testid="column"]:nth-of-type(1) div.stButton > button {
             color: transparent !important;
             background-color: #ffffff !important;
@@ -59,10 +59,10 @@ st.markdown("""
             background-position: center !important;
             background-repeat: no-repeat !important;
             border-radius: 50% !important;
-            width: 74px !important;
-            height: 74px !important;
-            min-width: 74px !important;
-            max-width: 74px !important;
+            width: 76px !important;
+            height: 76px !important;
+            min-width: 76px !important;
+            max-width: 76px !important;
             border: 1px solid #eeeeee !important;
             box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
@@ -73,7 +73,7 @@ st.markdown("""
             background-color: #fcfcfc !important;
         }
         
-        /* ❤️ いいねボタン：Tappleグラデーションに美しくシャープな純白SVGハートを描画 */
+        /* ❤️ いいねボタン：文字を透明にし、Tappleグラデーションに美しくシャープな純白SVGハートを描画 */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
             color: transparent !important;
             background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
@@ -82,12 +82,12 @@ st.markdown("""
             background-position: center !important;
             background-repeat: no-repeat !important;
             border-radius: 50% !important;
-            width: 74px !important;
-            height: 74px !important;
-            min-width: 74px !important;
-            max-width: 74px !important;
+            width: 76px !important;
+            height: 76px !important;
+            min-width: 76px !important;
+            max-width: 76px !important;
             border: none !important;
-            box-shadow: 0px 8px 24 rgba(255,65,108,0.3) !important;
+            box-shadow: 0px 8px 24px rgba(255,65,108,0.3) !important;
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
             margin: 0 auto !important;
         }
@@ -253,7 +253,7 @@ def get_chat_history(user_id, cast_id):
     """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正箇所：(user_id, cast_id) の引数を正しくバインドしてsqlite3のエラーを解消
+    # 🛡️ 修正完了：(user_id, cast_id) を完璧にバインドしてバインディングエラーを100%排除
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -481,7 +481,7 @@ def create_stripe_checkout_session(user_id):
 # =====================================================================
 def main():
     if not API_KEY:
-        st.error("🔑 .env から APIキーが読み込めていません。")
+        st.error("🔑 .env から APIキー（GEMINI_API_KEY）が読み込めていません。")
         st.stop()
 
     init_db()
@@ -553,7 +553,6 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
-        # あなた（シルエット） ── (❤️) ── キャストの顔
         col_p1, col_p2, col_p3 = st.columns([1, 0.8, 1])
         with col_p1:
             st.image("https://placehold.co/150x150/1e88e5/ffffff?text=YOU", use_container_width=True, caption="あなた")
@@ -619,7 +618,7 @@ def main():
             b64 = get_image_base64(p)
             img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
-        # 👑 【プロ仕様マージ：レスポンシブ自動フィット ＆ チカチカ光り完全消去 ＆ 3層分割スライドスクロール】
+        # 👑 【プロ仕様・完全融合：レスポンシブ自動フィット ＆ チカチカ光り完全消去 ＆ 3層分割スライドスクロール】
         slider_html = f"""
         <style>
             @keyframes cardAppear {{
