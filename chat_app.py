@@ -17,9 +17,9 @@ IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
 # 👑 ===================================================================
-# 📝 【社長用・設定欄】本番時の運営者情報をここに書くだけで自動反映されます！
+# 📝 【運営者情報・設定欄】後からいつでもここを書き換えて本番審査に提出できます
 # ＝====================================================================
-COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名
+COMPANY_NAME = "合同会社小嶋企画"  # 販売事業者名
 REPRESENTATIVE = "小嶋"  # 運営責任者名
 ADDRESS = "神奈川県川崎市中原区..."  # 所在地
 CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
@@ -33,7 +33,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示をさらに美しくするカスタムCSS
+# 🎨 スマホ表示最適化CSS（最上部の文字の重なりを5.0remの余白で完璧に解消）
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
@@ -208,7 +208,7 @@ def get_chat_history(user_id, cast_id):
     """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正箇所：変数 (user_id, cast_id) をパラメータとして正しく渡すように修正しました
+    # 🛡️ 修正点：ユーザーIDとキャストIDを正しくバインディング（引き渡し）してエラーを完璧に修正
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -371,7 +371,7 @@ def render_legal_documents():
             本サービスは、人工知能（LLM）技術を用いた架空のAIキャラクターとの疑似テキストコミュニケーションを楽しむ、健全なエンターテインメントWebアプリです。
             
             **第2条（AI自動応答に関する同意）**
-            1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空のメッセージ（AI自動応答）であることに同意し、楽しむものとします。
+            1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空 of メッセージ（AI自動応答）であることに同意し、楽しむものとします。
             2. 本サービスは実在する人物との1対1の出会いを提供するマッチングアプリではなく、サクラや人間が偽ってメッセージを送る詐欺行為も一切排除しています。
             
             **第3条（プレミアム会員）**
@@ -480,6 +480,7 @@ def main():
         chat_history = get_chat_history(USER_ID, cast_id)
 
     # 👑 2. 【タップル風・スマホ最適化縦型ヒーロー表示】
+    # 最上部に女の子の写真を「横幅100%（縦長）」で大きく配置
     img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
