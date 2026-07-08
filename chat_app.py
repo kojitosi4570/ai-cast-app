@@ -16,32 +16,20 @@ CAST_DATA_PATH = "cast_prompts_data.json"
 IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
-# 👑 ===================================================================
-# 📝 【社長用・設定欄】本番時の運営者情報をここに書くだけで自動反映されます！
-# ＝====================================================================
-COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名
-REPRESENTATIVE = "小嶋"  # 運営責任者名
-ADDRESS = "神奈川県川崎市中原区..."  # 所在地
-CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
-# =====================================================================
-
 # 📱 スマホ専用画面に最適化
 st.set_page_config(
     page_title="AIキャスト チャット", 
     page_icon="💬", 
-    layout="centered", 
-    initial_sidebar_state="collapsed"
+    layout="centered", # 画面中央にスマホ幅でスッキリ収める
+    initial_sidebar_state="collapsed" # スマホで邪魔になるサイドバーを最初から閉じる
 )
 
-# 🎨 タップル風・スマホ表示を極限まで美しくするカスタムCSS
+# 🎨 スマホ表示最適化CSS（上部余白を5.0remに拡大し、ヘッダーへのめり込みを完璧に防ぎます）
 st.markdown("""
     <style>
-        /* 不要なボタンを消し、スマホ幅に最適化 */
-        [data-testid="collapsedControl"] { display: none; }
-        .block-container { padding-top: 1.0rem; padding-bottom: 2rem; max-width: 450px !important; }
-        .stNotification { display: none !important; } 
-        
-        /* 1. 美しいプロフィールカードの装飾 */
+        [data-testid='collapsedControl'] { display: none; }
+        .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
+        .stNotification { display: none !important; }
         .profile-card {
             background-color: #fdfdfd;
             padding: 16px;
@@ -59,7 +47,7 @@ st.markdown("""
         }
         .profile-meta {
             font-size: 13px;
-            color: #ff4b4b; /* 華やかなピンク調 */
+            color: #ff4b4b;
             font-weight: bold;
             margin-bottom: 10px;
         }
@@ -69,8 +57,6 @@ st.markdown("""
             line-height: 1.6;
             margin: 0;
         }
-
-        /* 2. 決済カードの装飾 */
         .premium-card {
             background-color: #fffaf0;
             padding: 20px;
@@ -158,6 +144,7 @@ def upgrade_guest_to_premium(guest_id, email, password):
         
     password_hash = make_password_hash(password)
     
+    # ゲストIDを正規メールアドレスに書き換え（履歴を引き継いでプレミアム化）
     cursor.execute("UPDATE users SET user_id = ?, password_hash = ?, is_premium = 1, is_guest = 0 WHERE user_id = ?", (email, password_hash, guest_id))
     cursor.execute("UPDATE chat_counts SET user_id = ? WHERE user_id = ?", (email, guest_id))
     cursor.execute("UPDATE chat_messages SET user_id = ? WHERE user_id = ?", (email, guest_id))
@@ -215,7 +202,7 @@ def get_chat_history(user_id, cast_id):
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
         ORDER BY id ASC
-    """, (user_id, cast_id))
+    """)
     rows = cursor.fetchall()
     conn.close()
     
@@ -370,7 +357,7 @@ def render_legal_documents():
         with st.expander("📄 利用規約"):
             st.markdown(f"""
             **第1条（目的）**
-            本サービス（以下「当サービス」）は、人工知能（LLM）技術を用いた架空のAIキャラクターとの疑似テキストコミュニケーションを楽しむ、健全なエンターテインメントWebアプリです。
+            本サービスは、人工知能（LLM）技術を用いた架空のAIキャラクターとの疑似テキストコミュニケーションを楽しむ、健全なエンターテインメントWebアプリです。
             
             **第2条（AI自動応答に関する同意）**
             1. ユーザーは、当サービス内のすべての対話相手がAIシステムによって自動生成された架空のメッセージ（AI自動応答）であることに同意し、楽しむものとします。
@@ -577,7 +564,7 @@ def main():
             2. 丁寧で上品でありながら、親しみやすさを織り交ぜた優しい敬語（〜ですね、〜ですか？など）で接してください（タメ口は一律禁止です）。
             3. 「（笑）」や「笑」、「w」などのネット表現はサクラ感が出るため【一律で使用禁止】です。楽しさを表現する際は、自然な絵文字（😊、✨、♪）をメッセージに1〜2個程度、優しく落とすように使ってください。
             4. 相手の直前の発言を完璧に理解し、それに対するあなた自身の具体的な感想や共感、お茶目なリアクションを必ず1〜2文入れて返答してください。一言だけの淡白な返信は絶対にしないでください。
-            5. 会話を一方的に受け止めて終わらせるのではなく、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
+            5. 会話を一方的に受け止めて終わらせるのではない、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
             6. 返答は、スマホのチャット画面で最も読みやすい【120文字前後（3〜4文程度）】に整え、必ず文章の最後まで途切れることなく完結させて出力してください。
             """
 
