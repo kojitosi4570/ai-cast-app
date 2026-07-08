@@ -21,10 +21,10 @@ DB_PATH = "himakano.db"  # 💾 データベース
 # 👑 ===================================================================
 # 📝 【運営者情報・設定欄】後からいつでもここを書き換えて本番審査に提出できます
 # =====================================================================
-COMPANY_NAME = "合同会社小嶋企画"  # 販売事業者名
-REPRESENTATIVE = "小嶋"  # 運営責任者名
-ADDRESS = "神奈川県川崎市中原区..."  # 所在地
-CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
+COMPANY_NAME = "合同会社小嶋企画"
+REPRESENTATIVE = "小嶋"
+ADDRESS = "神奈川県川崎市中原区..."
+CONTACT_EMAIL = "kojitosi4570@gmail.com"
 # =====================================================================
 
 # 📱 スマホ専用画面に最適化
@@ -35,66 +35,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 タップルを完全トレースする最高峰カスタムCSS（高精細SVGボタン＆位置調整）
+# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS（余計な隙間を徹底排除します）
 st.markdown("""
     <style>
-        /* 不要なStreamlit純正UIをシャットアウト */
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
-        
-        /* 1カラムのボタンの水平中央配置を強制 */
-        div[data-testid="column"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }
-
-        /* ❌ スキップボタン：文字を透明にし、高精細な細線SVGのバツマークを背景として直接描画 */
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            color: transparent !important;
-            background-color: #ffffff !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff4d4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>') !important;
-            background-size: 32px 32px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 76px !important;
-            height: 76px !important;
-            min-width: 76px !important;
-            max-width: 76px !important;
-            border: 1px solid #eeeeee !important;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            background-color: #fcfcfc !important;
-        }
-        
-        /* ❤️ いいねボタン：文字を透明にし、Tappleグラデーションに美しくシャープな純白SVGハートを描画 */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            color: transparent !important;
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') !important;
-            background-size: 32px 32px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 76px !important;
-            height: 76px !important;
-            min-width: 76px !important;
-            max-width: 76px !important;
-            border: none !important;
-            box-shadow: 0px 8px 24px rgba(255,65,108,0.3) !important;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            opacity: 0.95 !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -250,10 +196,8 @@ def increment_chat_count(user_id, cast_id):
 
 
 def get_chat_history(user_id, cast_id):
-    """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正完了：(user_id, cast_id) を完璧にバインドしてバインディングエラーを100%排除
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -481,7 +425,7 @@ def create_stripe_checkout_session(user_id):
 # =====================================================================
 def main():
     if not API_KEY:
-        st.error("🔑 .env から APIキー（GEMINI_API_KEY）が読み込めていません。")
+        st.error("🔑 .env から APIキーが読み込めていません。")
         st.stop()
 
     init_db()
@@ -508,7 +452,7 @@ def main():
     if "active_chat_cast_id" not in st.session_state:
         st.session_state.active_chat_cast_id = None 
 
-    # 💳 Stripe決済完了チェック
+    # 💳 1. 【Stripe連動処理】Stripeでの決済完了確認
     query_params = st.query_params
     if "session_id" in query_params and "user_id_verify" in query_params:
         session_id = query_params["session_id"]
@@ -525,6 +469,23 @@ def main():
                     st.rerun()
             except Exception as e:
                 st.error(f"決済の検証中にエラーが発生しました: {e}")
+
+    # 💓 2. 【スワイプ動作連動】HTMLボタンから渡されるパラメータ（action=like / skip）の自動処理
+    if "action" in query_params:
+        action = query_params["action"]
+        casts_data = load_all_casts()
+        
+        if st.session_state.swipe_index < len(casts_data):
+            active_c = casts_data[st.session_state.swipe_index]
+            if action == "like":
+                # マッチング登録
+                add_match(USER_ID, active_c["id"])
+                st.session_state.last_matched_cast = active_c
+            
+            # いずれのアクションでもインデックスを1進めてリセット
+            st.session_state.swipe_index += 1
+            st.query_params.clear() # URLをきれいに掃除
+            st.rerun()
 
     casts = load_all_casts()
     if not casts:
@@ -553,6 +514,7 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
+        # シルエット ── (❤️) ── キャストの顔
         col_p1, col_p2, col_p3 = st.columns([1, 0.8, 1])
         with col_p1:
             st.image("https://placehold.co/150x150/1e88e5/ffffff?text=YOU", use_container_width=True, caption="あなた")
@@ -599,7 +561,11 @@ def main():
             return
             
         if st.session_state.swipe_index >= len(filtered_casts):
-            st.session_state.swipe_index = 0
+            st.info("現在ご紹介できるお相手は以上です。お好み条件を変更してみるか、最初から見てみてね！")
+            if st.button("🔄 最初からお相手を見る", use_container_width=True):
+                st.session_state.swipe_index = 0
+                st.rerun()
+            return
             
         active_cast = filtered_casts[st.session_state.swipe_index]
         c_id = active_cast["id"]
@@ -618,9 +584,18 @@ def main():
             b64 = get_image_base64(p)
             img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
-        # 👑 【プロ仕様・完全融合：レスポンシブ自動フィット ＆ チカチカ光り完全消去 ＆ 3層分割スライドスクロール】
+        # 👑 【究極進化：タップル風・全内包スライダーカード】
+        # 1. 画面サイズ（高さ540px）に完全に拡大し、PC/スマホでの窮屈感を100%解消
+        # 2. タップ時のチカチカ点灯（フラッシュ）を完全に消去（-webkit-tap-highlight-color）
+        # 3. 自己紹介背景の黒グラデーションを薄めの「超自然なグラデ」に変更
+        # 4. 白地の細線✕ボタン、斜めグラデーション純白ハートSVGボタンをカード内に完璧に固定配置！
         slider_html = f"""
         <style>
+            * {{
+                -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+            }}
             @keyframes cardAppear {{
                 0% {{ opacity: 0; transform: translateY(15px) scale(0.98); }}
                 100% {{ opacity: 1; transform: translateY(0) scale(1); }}
@@ -628,49 +603,80 @@ def main():
             .slider-wrapper {{
                 position: relative; 
                 width: 100%; 
-                max-width: 420px; 
-                aspect-ratio: 3 / 4; /* スマホ画面に合わせた縦横比 */
-                max-height: 65vh; /* 画面が小さい端末でもはみ出さないように */
+                max-width: 440px; 
+                height: 520px; /* 縦幅を大きく拡大 */
                 border-radius: 28px; 
                 overflow: hidden; 
                 background-color: #000; 
-                box-shadow: 0px 10px 30px rgba(0,0,0,0.15); 
+                box-shadow: 0px 10px 30px rgba(0,0,0,0.12); 
                 margin: 0 auto; 
-                -webkit-tap-highlight-color: rgba(0,0,0,0) !important; 
-                user-select: none;
                 animation: cardAppear 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
             }}
+            
+            /* 薄めの自然な黒グラデーションに変更（文字の視認性と女の子の美しさを100%両立） */
             .profile-sheet {{
                 position: absolute; 
-                bottom: 0; 
+                bottom: 100px; /* ボタンのために少し底を上げます */
                 left: 0; 
                 width: 100%; 
-                max-height: 40%; /* 画像の40%の高さまで */
+                max-height: 160px; 
                 overflow-y: auto; 
-                background: linear-gradient(to top, rgba(0,0,0,0.95) 45%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%); 
+                background: linear-gradient(to top, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.3) 80%, rgba(0,0,0,0) 100%); 
                 color: #ffffff; 
-                padding: 30px 18px 20px 18px; 
+                padding: 25px 18px 15px 18px; 
                 box-sizing: border-box; 
                 z-index: 8; 
                 -webkit-overflow-scrolling: touch; 
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             }}
-            /* スクロールバーを見えなくする */
-            .profile-sheet::-webkit-scrollbar {{ display: none; }}
+            .profile-sheet::-webkit-scrollbar {{ display: none !important; }}
+            
+            /* カード内に完全に固定浮遊された「✕」と「❤️」の特製丸ボタン */
+            .buttons-container {{
+                position: absolute;
+                bottom: 12px;
+                left: 0;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                gap: 40px;
+                z-index: 10;
+            }}
+            .action-btn {{
+                width: 72px;
+                height: 72px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+                box-shadow: 0px 8px 20px rgba(0,0,0,0.15);
+            }}
+            .btn-skip {{
+                background-color: #ffffff;
+                border: 1px solid #f2f2f2;
+            }}
+            .btn-skip:active {{ transform: scale(0.9); background-color: #f7f7f7; }}
+            .btn-like {{
+                background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+                border: none;
+            }}
+            .btn-like:active {{ transform: scale(0.9); opacity: 0.95; }}
         </style>
 
         <div class="slider-wrapper">
             <!-- 5本線の進捗インジケーター -->
-            <div class="indicator-bar" style="position: absolute; top: 12px; left: 0; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; padding: 0 16px; box-sizing: border-box;">
-                <div class="bar" id="b-0" style="flex: 1; height: 3px; background-color: #ffffff; border-radius: 2px; transition: all 0.2s;"></div>
-                <div class="bar" id="b-1" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
-                <div class="bar" id="b-2" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
-                <div class="bar" id="b-3" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
-                <div class="bar" id="b-4" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
+            <div style="position: absolute; top: 12px; left: 0; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; padding: 0 16px; box-sizing: border-box;">
+                <div class="bar" id="b-0" style="flex: 1; height: 3px; background-color: #ffffff; border-radius: 2px;"></div>
+                <div class="bar" id="b-1" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px;"></div>
+                <div class="bar" id="b-2" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px;"></div>
+                <div class="bar" id="b-3" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px;"></div>
+                <div class="bar" id="b-4" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px;"></div>
             </div>
             
             <!-- スライド画像トラック -->
-            <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.25s ease-out; -webkit-tap-highlight-color: rgba(0,0,0,0) !important;">
+            <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.25s ease-out;">
                 <img src="{img_srcs[0]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
                 <img src="{img_srcs[1]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
                 <img src="{img_srcs[2]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
@@ -678,20 +684,32 @@ def main():
                 <img src="{img_srcs[4]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
             </div>
             
-            <!-- 左右タップエリア（タップフラッシュを完全無効化） -->
-            <div class="tap-left" onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
-            <div class="tap-right" onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+            <!-- 左右タップエリア -->
+            <div onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer;"></div>
+            <div onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer;"></div>
 
-            <!-- プロフィールシート（写真の上をスルスルと内部スクロールする設計） -->
+            <!-- プロフィールシート（スルスル上下に中身だけがスクロールする設計） -->
             <div class="profile-sheet">
-                <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+                <div style="font-size: 23px; font-weight: bold; margin-bottom: 4px; text-shadow: 0px 2px 4px rgba(0,0,0,0.4);">
                     {active_cast['name']} <span style="font-size: 16px; font-weight: normal; opacity: 0.9;">{active_cast['age']}歳</span>
                 </div>
-                <div style="display: inline-block; background-color: rgba(255,75,75,0.9); color: white; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;">
+                <div style="display: inline-block; background-color: rgba(255,75,75,0.9); color: white; font-size: 11px; font-weight: bold; padding: 2px 10px; border-radius: 20px; margin-bottom: 10px;">
                     💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉周辺
                 </div>
-                <div style="font-size: 14px; line-height: 1.5; opacity: 0.95; white-space: pre-wrap; font-weight: normal; pointer-events: auto; text-shadow: 0px 1px 2px rgba(0,0,0,0.8);">
+                <div style="font-size: 13.5px; line-height: 1.5; opacity: 0.95; white-space: pre-wrap; font-weight: normal; pointer-events: auto; text-shadow: 0px 1px 2px rgba(0,0,0,0.6);">
                     {active_cast['profile_text']}
+                </div>
+            </div>
+            
+            <!-- 👑 【解決策：本物のSVGベクターボタン】写真の中に完全に配置してズレを解消！ -->
+            <div class="buttons-container">
+                <!-- ✕ ボタン（細線の美しいクロスSVG） -->
+                <div class="action-btn btn-skip" onclick="parent.location.href='?action=skip'">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="%23ff4d4d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+                <!-- ❤️ ボタン（ぷっくり丸みを帯びた美しいハートSVG） -->
+                <div class="action-btn btn-like" onclick="parent.location.href='?action=like'">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </div>
             </div>
         </div>
@@ -714,21 +732,8 @@ def main():
         </script>
         """
         
-        # 💡 レスポンシブ対応のため、高さに少しマージンを持たせて埋め込み
+        # 💡 スライダー部分（中にボタンとスクロールも内包）を表示
         components.html(slider_html, height=520, scrolling=False)
-        
-        # ❌ スキップ と ❤️ いいね！ の丸型特製アイコンボタン（CSSによる完璧なグラフィック適用、かつ画面位置の最適化）
-        st.write(" ")
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            if st.button("✕", key="skip_btn", use_container_width=True):
-                st.session_state.swipe_index += 1
-                st.rerun()
-        with col_b2:
-            if st.button("❤️", key="like_btn", use_container_width=True):
-                add_match(USER_ID, c_id)
-                st.session_state.last_matched_cast = active_cast
-                st.rerun()
 
 
     # 💬 3. 【やり取り（チャット）】画面
