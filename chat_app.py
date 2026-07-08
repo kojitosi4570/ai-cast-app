@@ -20,7 +20,7 @@ DB_PATH = "himakano.db"  # 💾 データベース
 
 # 👑 ===================================================================
 # 📝 【運営者情報・設定欄】
-# ＝====================================================================
+# =====================================================================
 COMPANY_NAME = "合同会社小嶋企画"
 REPRESENTATIVE = "小嶋"
 ADDRESS = "神奈川県川崎市中原区..."
@@ -35,111 +35,64 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくするカスタムCSS（丸型グラデーションボタンの搭載）
+# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS
 st.markdown("""
     <style>
+        /* 不要なStreamlit純正UIをシャットアウト */
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
         
-        /* ① タップル風プロフィールカードの装飾 */
-        .tapple-card {
-            background-color: #ffffff;
-            border-radius: 24px;
-            border: 1px solid #f0f0f0;
-            padding: 20px;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.03);
-            margin-top: 15px;
-            margin-bottom: 20px;
-        }
-        .tapple-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111111;
-            margin-bottom: 4px;
-        }
-        .tapple-badge {
-            display: inline-block;
-            background-color: #ff4b4b;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 3px 10px;
-            border-radius: 20px;
-            margin-bottom: 12px;
-        }
-        .tapple-desc {
-            font-size: 14px;
-            color: #444444;
-            line-height: 1.6;
-        }
-
-        /* ② マッチング成立画面の演出 */
-        .match-popup {
-            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
-            border-radius: 24px;
-            padding: 30px;
-            text-align: center;
-            color: white;
-            box-shadow: 0px 10px 30px rgba(255,118,140,0.3);
-            margin-bottom: 25px;
-        }
-        .match-title {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* ③ 通常の課金カード */
-        .premium-card {
-            background-color: #fffaf0;
-            padding: 20px;
-            border-radius: 20px;
-            border: 2px solid #ffd700;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0px 4px 15px rgba(0,0,0,0.05);
-        }
-
-        /* ④ ❌ と ❤️ の超洗練された丸型ベクターデザインボタン（CSSでStreamlit標準ボタンを完全上書き） */
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            background-color: #ffffff !important;
-            color: #ff5252 !important;
-            font-size: 32px !important;
-            border-radius: 50% !important;
-            width: 72px !important;
-            height: 72px !important;
-            margin: 0 auto !important;
+        /* 1カラムのボタンの水平中央配置を強制 */
+        div[data-testid="column"] {
             display: flex !important;
-            align-items: center !important;
             justify-content: center !important;
-            border: 1px solid #f2f2f2 !important;
+            align-items: center !important;
+        }
+
+        /* ❌ スキップボタン：文字を透明にし、高精細な細線SVGのバツマークを背景として描画 */
+        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+            color: transparent !important;
+            background-color: #ffffff !important;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff4d4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>') !important;
+            background-size: 32px 32px !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            border-radius: 50% !important;
+            width: 74px !important;
+            height: 74px !important;
+            min-width: 74px !important;
+            max-width: 74px !important;
+            border: 1px solid #eeeeee !important;
             box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s ease !important;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            margin: 0 auto !important;
         }
         div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
-            transform: scale(0.9) !important;
-            background-color: #f7f7f2 !important;
+            transform: scale(0.90) !important;
+            background-color: #fcfcfc !important;
         }
         
+        /* ❤️ いいねボタン：Tappleグラデーションに美しくシャープな純白SVGハートを描画 */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background: linear-gradient(135deg, #ff5252 0%, #ff7eb3 100%) !important;
-            color: #ffffff !important;
-            font-size: 32px !important;
+            color: transparent !important;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') !important;
+            background-size: 32px 32px !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
             border-radius: 50% !important;
-            width: 72px !important;
-            height: 72px !important;
-            margin: 0 auto !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
+            width: 74px !important;
+            height: 74px !important;
+            min-width: 74px !important;
+            max-width: 74px !important;
             border: none !important;
-            box-shadow: 0px 8px 24px rgba(255,82,82,0.25) !important;
-            transition: all 0.2s ease !important;
+            box-shadow: 0px 8px 24 rgba(255,65,108,0.3) !important;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            margin: 0 auto !important;
         }
         div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
-            transform: scale(0.9) !important;
+            transform: scale(0.90) !important;
             opacity: 0.95 !important;
         }
     </style>
@@ -297,8 +250,10 @@ def increment_chat_count(user_id, cast_id):
 
 
 def get_chat_history(user_id, cast_id):
+    """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
+    # 🛡️ 修正箇所：(user_id, cast_id) の引数を正しくバインドしてsqlite3のエラーを解消
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -396,7 +351,7 @@ def call_gemini_chat_engine(system_instruction, chat_history):
 
 
 # =====================================================================
-# 4. 👤 キャストデータの読み込み & 🖼️ 画像Base64変換（サーバー読込対策）
+# 4. 👤 キャストデータの読み込み & Base64変換
 # =====================================================================
 def load_all_casts():
     possible_paths = ["cast_prompts_data.json", "npc_prompts_data.json"]
@@ -419,7 +374,6 @@ def load_all_casts():
 
 
 def get_image_base64(path):
-    """Renderなどのサーバー上でiframe内に確実に画像を読み込ませるためのBase64エンコード処理"""
     if not os.path.exists(path):
         return ""
     try:
@@ -651,7 +605,7 @@ def main():
         active_cast = filtered_casts[st.session_state.swipe_index]
         c_id = active_cast["id"]
         
-        # 📸 5枚の写真パスを用意してBase64化（表示のチカチカ・遅延を完全にゼロにします）
+        # 📸 5枚の写真パスを用意してBase64化
         photo_paths = [
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_1_main.png"),
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_2_sub.png"),
@@ -665,10 +619,48 @@ def main():
             b64 = get_image_base64(p)
             img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
-        # 👑 【究極進化：タップル風HTML/JSフォトスライダー】
-        # 左右タップエリアの完全対応＆上部の5本線インジケーター同期システム
+        # 👑 【プロ仕様マージ：レスポンシブ自動フィット ＆ チカチカ光り完全消去 ＆ 3層分割スライドスクロール】
         slider_html = f"""
-        <div class="slider-wrapper" style="position: relative; width: 100%; max-width: 420px; height: 480px; border-radius: 28px; overflow: hidden; background-color: #000; box-shadow: 0px 10px 30px rgba(0,0,0,0.15); margin: 0 auto;">
+        <style>
+            @keyframes cardAppear {{
+                0% {{ opacity: 0; transform: translateY(15px) scale(0.98); }}
+                100% {{ opacity: 1; transform: translateY(0) scale(1); }}
+            }}
+            .slider-wrapper {{
+                position: relative; 
+                width: 100%; 
+                max-width: 420px; 
+                aspect-ratio: 3 / 4; /* スマホ画面に合わせた縦横比 */
+                max-height: 65vh; /* 画面が小さい端末でもはみ出さないように */
+                border-radius: 28px; 
+                overflow: hidden; 
+                background-color: #000; 
+                box-shadow: 0px 10px 30px rgba(0,0,0,0.15); 
+                margin: 0 auto; 
+                -webkit-tap-highlight-color: rgba(0,0,0,0) !important; 
+                user-select: none;
+                animation: cardAppear 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+            }}
+            .profile-sheet {{
+                position: absolute; 
+                bottom: 0; 
+                left: 0; 
+                width: 100%; 
+                max-height: 40%; /* 画像の40%の高さまで */
+                overflow-y: auto; 
+                background: linear-gradient(to top, rgba(0,0,0,0.95) 45%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%); 
+                color: #ffffff; 
+                padding: 30px 18px 20px 18px; 
+                box-sizing: border-box; 
+                z-index: 8; 
+                -webkit-overflow-scrolling: touch; 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }}
+            /* スクロールバーを見えなくする */
+            .profile-sheet::-webkit-scrollbar {{ display: none; }}
+        </style>
+
+        <div class="slider-wrapper">
             <!-- 5本線の進捗インジケーター -->
             <div class="indicator-bar" style="position: absolute; top: 12px; left: 0; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; padding: 0 16px; box-sizing: border-box;">
                 <div class="bar" id="b-0" style="flex: 1; height: 3px; background-color: #ffffff; border-radius: 2px; transition: all 0.2s;"></div>
@@ -678,8 +670,8 @@ def main():
                 <div class="bar" id="b-4" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
             </div>
             
-            <!-- スライドトラック -->
-            <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);">
+            <!-- スライド画像トラック -->
+            <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.25s ease-out; -webkit-tap-highlight-color: rgba(0,0,0,0) !important;">
                 <img src="{img_srcs[0]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
                 <img src="{img_srcs[1]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
                 <img src="{img_srcs[2]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
@@ -687,9 +679,22 @@ def main():
                 <img src="{img_srcs[4]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
             </div>
             
-            <!-- 左右透明なタップエリア -->
-            <div class="tap-left" onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer;"></div>
-            <div class="tap-right" onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer;"></div>
+            <!-- 左右タップエリア（タップフラッシュを完全無効化） -->
+            <div class="tap-left" onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+            <div class="tap-right" onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+
+            <!-- プロフィールシート（写真の上をスルスルと内部スクロールする設計） -->
+            <div class="profile-sheet">
+                <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">
+                    {active_cast['name']} <span style="font-size: 16px; font-weight: normal; opacity: 0.9;">{active_cast['age']}歳</span>
+                </div>
+                <div style="display: inline-block; background-color: rgba(255,75,75,0.9); color: white; font-size: 12px; font-weight: bold; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;">
+                    💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉周辺
+                </div>
+                <div style="font-size: 14px; line-height: 1.5; opacity: 0.95; white-space: pre-wrap; font-weight: normal; pointer-events: auto; text-shadow: 0px 1px 2px rgba(0,0,0,0.8);">
+                    {active_cast['profile_text']}
+                </div>
+            </div>
         </div>
         
         <script>
@@ -701,43 +706,20 @@ def main():
                 tr.style.transform = `translateX(${{-idx * 100}}%)`;
                 for (let i = 0; i < limit; i++) {{
                     const bar = document.getElementById(`b-${{i}}`);
-                    if (i === idx) {{
-                        bar.style.backgroundColor = '#ffffff';
-                    }} else {{
-                        bar.style.backgroundColor = 'rgba(255,255,255,0.4)';
-                    }}
+                    if(bar) bar.style.backgroundColor = (i === idx) ? '#ffffff' : 'rgba(255,255,255,0.4)';
                 }}
             }}
             
-            function next() {{
-                if (idx < limit - 1) {{
-                    idx++;
-                    refresh();
-                }}
-            }}
-            
-            function prev() {{
-                if (idx > 0) {{
-                    idx--;
-                    refresh();
-                }}
-            }}
+            function next() {{ if (idx < limit - 1) {{ idx++; refresh(); }} }}
+            function prev() {{ if (idx > 0) {{ idx--; refresh(); }} }}
         </script>
         """
         
-        # iframe上にスライダーを表示（高さ・余白を調整）
-        components.html(slider_html, height=490)
-
-        # 👑 タップル風プロフィールカード
-        st.markdown(f"""
-            <div class="tapple-card">
-                <div class="tapple-name">{active_cast['name']} ({active_cast['age']}歳)</div>
-                <div class="tapple-badge">💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉（神奈川）周辺</div>
-                <p class="tapple-desc">{active_cast['profile_text']}</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # 💡 レスポンシブ対応のため、高さに少しマージンを持たせて埋め込み
+        components.html(slider_html, height=520, scrolling=False)
         
-        # ❌ スキップ（バツ） と ❤️ いいね！ の丸型特製アイコンボタン
+        # ❌ スキップ と ❤️ いいね！ の丸型特製アイコンボタン（CSSによる完璧なグラフィック適用、かつ画面位置の最適化）
+        st.write(" ")
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("✕", key="skip_btn", use_container_width=True):
@@ -761,7 +743,7 @@ def main():
             
         matched_casts = [c for c in casts if c["id"] in matched_ids]
         
-        # 👥 マッチング中のお相手（丸型アイコン写真の横並び選択UI）
+        # 👥 マッチング中のお相手
         st.markdown("### 👥 マッチング中のお相手")
         
         if st.session_state.active_chat_cast_id not in matched_ids:
