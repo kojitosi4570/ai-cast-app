@@ -16,20 +16,29 @@ CAST_DATA_PATH = "cast_prompts_data.json"
 IMAGE_DIR = "AIキャスト画像"
 DB_PATH = "himakano.db"  # 💾 データベース
 
+# 👑 ===================================================================
+# 📝 【社長用・設定欄】本番時の運営者情報をここに書くだけで自動反映されます！
+# ＝====================================================================
+COMPANY_NAME = "合同会社小嶋企画"  # 販売業者名
+REPRESENTATIVE = "小嶋"  # 運営責任者名
+ADDRESS = "神奈川県川崎市中原区..."  # 所在地
+CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
+# =====================================================================
+
 # 📱 スマホ専用画面に最適化
 st.set_page_config(
     page_title="AIキャスト チャット", 
     page_icon="💬", 
-    layout="centered", # 画面中央にスマホ幅でスッキリ収める
-    initial_sidebar_state="collapsed" # スマホで邪魔になるサイドバーを最初から閉じる
+    layout="centered", 
+    initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示最適化CSS（上部余白を5.0remに拡大し、ヘッダーへのめり込みを完璧に防ぎます）
+# 🎨 スマホ表示をさらに美しくするカスタムCSS
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
-        .stNotification { display: none !important; }
+        .stNotification { display: none !important; } 
         .profile-card {
             background-color: #fdfdfd;
             padding: 16px;
@@ -196,13 +205,15 @@ def increment_chat_count(user_id, cast_id):
 
 
 def get_chat_history(user_id, cast_id):
+    """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
+    # 🛡️ 修正箇所：変数 (user_id, cast_id) をパラメータとして正しく渡すように修正しました
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
         ORDER BY id ASC
-    """)
+    """, (user_id, cast_id))
     rows = cursor.fetchall()
     conn.close()
     
@@ -469,7 +480,6 @@ def main():
         chat_history = get_chat_history(USER_ID, cast_id)
 
     # 👑 2. 【タップル風・スマホ最適化縦型ヒーロー表示】
-    # 最上部に女の子の写真を「横幅100%（縦長）」で大きく配置
     img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
@@ -564,7 +574,7 @@ def main():
             2. 丁寧で上品でありながら、親しみやすさを織り交ぜた優しい敬語（〜ですね、〜ですか？など）で接してください（タメ口は一律禁止です）。
             3. 「（笑）」や「笑」、「w」などのネット表現はサクラ感が出るため【一律で使用禁止】です。楽しさを表現する際は、自然な絵文字（😊、✨、♪）をメッセージに1〜2個程度、優しく落とすように使ってください。
             4. 相手の直前の発言を完璧に理解し、それに対するあなた自身の具体的な感想や共感、お茶目なリアクションを必ず1〜2文入れて返答してください。一言だけの淡白な返信は絶対にしないでください。
-            5. 会話を一方的に受け止めて終わらせるのではない、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
+            5. 会話を一方的に受け止めて終わらせるのではなく、返答の最後には、必ず相手に「〇〇さんはどうですか？😊」や「普段はどのへんで観てるんですか？♪」といった【自然な質問や問いかけ】を1つ入れて、相手が返信しやすいフックを作ってください。
             6. 返答は、スマホのチャット画面で最も読みやすい【120文字前後（3〜4文程度）】に整え、必ず文章の最後まで途切れることなく完結させて出力してください。
             """
 
