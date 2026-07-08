@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # 📡 1. .env からAPIキーを自動読み込み
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY") # 💳 追加：StripeのAPIキー
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
 CAST_DATA_PATH = "cast_prompts_data.json"
 IMAGE_DIR = "AIキャスト画像"
@@ -33,12 +33,44 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示をさらに美しく、チャット枠をLINE風に近づけるスタイリング
+# 🎨 タップル風・スマホ表示を極限まで美しくするカスタムCSS
 st.markdown("""
     <style>
+        /* 不要なボタンを消し、スマホ幅に最適化 */
         [data-testid="collapsedControl"] { display: none; }
-        .block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 450px !important; }
+        .block-container { padding-top: 1.0rem; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
+        
+        /* 1. 美しいプロフィールカードの装飾 */
+        .profile-card {
+            background-color: #fdfdfd;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid #f0f0f0;
+            margin-top: -15px;
+            margin-bottom: 20px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.02);
+        }
+        .profile-name {
+            font-size: 21px;
+            font-weight: bold;
+            color: #222;
+            margin: 0 0 6px 0;
+        }
+        .profile-meta {
+            font-size: 13px;
+            color: #ff4b4b; /* 華やかなピンク調 */
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .profile-desc {
+            font-size: 14px;
+            color: #444;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* 2. 決済カードの装飾 */
         .premium-card {
             background-color: #fffaf0;
             padding: 20px;
@@ -51,7 +83,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Stripeライブラリの読み込み（インストールされていない場合はダミーで対応）
 try:
     import stripe
     if STRIPE_SECRET_KEY:
@@ -127,7 +158,6 @@ def upgrade_guest_to_premium(guest_id, email, password):
         
     password_hash = make_password_hash(password)
     
-    # ゲストIDを正規メールアドレスに書き換え（履歴を引き継いでプレミアム化）
     cursor.execute("UPDATE users SET user_id = ?, password_hash = ?, is_premium = 1, is_guest = 0 WHERE user_id = ?", (email, password_hash, guest_id))
     cursor.execute("UPDATE chat_counts SET user_id = ? WHERE user_id = ?", (email, guest_id))
     cursor.execute("UPDATE chat_messages SET user_id = ? WHERE user_id = ?", (email, guest_id))
@@ -149,7 +179,6 @@ def get_user_premium(user_id):
 
 
 def set_user_premium_direct(user_id, is_premium):
-    """ユーザーのプレミアムステータスを直接更新します（決済完了確認用）"""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE users SET is_premium = ? WHERE user_id = ?", (int(is_premium), user_id))
@@ -359,14 +388,12 @@ def render_legal_documents():
 # 💳 Stripe Checkout 決済セッション作成関数
 # =====================================================================
 def create_stripe_checkout_session(user_id):
-    """Stripe社が用意する安全な公式クレジットカード決済ページ（月額300円サブスク）のURLを生成します"""
     if not stripe or not STRIPE_SECRET_KEY:
         st.error("⚠️ StripeのAPIキーが登録されていないか、ライブラリがインストールされていません。")
         return None
         
     try:
-        # ご自身のドメインを自動検出（ローカルでも本番URLでも自動で戻ってこられる設定）
-        base_url = "https://ai-cast-app.onrender.com"  # 本番のRenderアドレス
+        base_url = "https://ai-cast-app.onrender.com"
         
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -377,15 +404,14 @@ def create_stripe_checkout_session(user_id):
                         'name': 'プレミアムプラン（お喋り無制限）',
                         'description': 'AIキャストたちと制限なしで自由にお喋りを楽しめます。',
                     },
-                    'unit_amount': 300, # 💰 月額300円に設定
+                    'unit_amount': 300,
                     'recurring': {
-                        'interval': 'month', # サブスクリプション（月額課金）
+                        'interval': 'month',
                     },
                 },
                 'quantity': 1,
             }],
             mode='subscription',
-            # 決済成功・キャンセル時に戻ってくるページURL
             success_url=f"{base_url}/?session_id={{CHECKOUT_SESSION_ID}}&user_id_verify={user_id}",
             cancel_url=f"{base_url}/",
         )
@@ -396,7 +422,7 @@ def create_stripe_checkout_session(user_id):
 
 
 # =====================================================================
-# 5. 🎨 Streamlit 画面表示（スマホ縦画面完全特化）
+# 5. 🎨 Streamlit 画面表示・メインロジック（スマホ特化＆縦型タップル風UI）
 # =====================================================================
 def main():
     if not API_KEY:
@@ -405,7 +431,6 @@ def main():
 
     init_db()
 
-    # 1. 🔑 お試し用のゲストアカウント
     if "guest_id" not in st.session_state:
         st.session_state.guest_id = "guest_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
         
@@ -417,13 +442,12 @@ def main():
 
     USER_ID = st.session_state.active_user_id
 
-    # 💳 2. 【Stripe連動処理】Stripeでの決済完了後に戻ってきたときの自動昇格処理
+    # 💳 Stripeでの決済完了確認
     query_params = st.query_params
     if "session_id" in query_params and "user_id_verify" in query_params:
         session_id = query_params["session_id"]
         user_verify = query_params["user_id_verify"]
         
-        # Stripeで本当に支払いが終わっているか自動チェック
         if stripe:
             try:
                 checkout_session = stripe.checkout.Session.retrieve(session_id)
@@ -431,7 +455,6 @@ def main():
                     set_user_premium_direct(user_verify, True)
                     st.session_state.active_user_id = user_verify
                     st.success("🎉 お支払いが確認できました！プレミアム会員として無制限にお喋りをお楽しみください！")
-                    # URLパラメータを綺麗にクリア
                     st.query_params.clear()
                     st.rerun()
             except Exception as e:
@@ -442,7 +465,7 @@ def main():
         st.warning("⚠️ キャストデータが空っぽです。")
         st.stop()
 
-    # 📱 最上部でのキャスト選択
+    # 📱 1. 【キャスト選択】最上部ヘッダー
     st.markdown("### 👤 キャストを選んでチャット開始")
     cast_names = [c["name"] for c in casts]
     selected_name = st.selectbox("", cast_names, label_visibility="collapsed")
@@ -458,21 +481,26 @@ def main():
         save_chat_message(USER_ID, cast_id, "model", cast["first_message"])
         chat_history = get_chat_history(USER_ID, cast_id)
 
-    # 👑 キャスト写真・プロフィールのコンパクト表示
-    col1, col2 = st.columns([1, 1.8])
-    with col1:
-        img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
-        if os.path.exists(img_path):
-            st.image(img_path, use_container_width=True)
-        else:
-            st.image("https://placehold.co/400x500?text=AI+Cast", use_container_width=True)
-    with col2:
-        st.markdown(f"**{cast['name']} ({cast['age']}歳 / {cast['job']})**")
-        st.write(cast["profile_text"][:85] + "...") 
+    # 👑 2. 【タップル風・スマホ最適化縦型ヒーロー表示】
+    # 最上部に女の子の写真を「横幅100%（縦長）」で大きく配置
+    img_path = os.path.join(IMAGE_DIR, cast_id, f"{cast_id}_photo_1_main.png")
+    if os.path.exists(img_path):
+        st.image(img_path, use_container_width=True)
+    else:
+        st.image("https://placehold.co/400x500?text=AI+Cast+Image", use_container_width=True)
+
+    # 写真のすぐ下に、名前、年齢、職業、プロファイルをすっきり配置
+    st.markdown(f"""
+        <div class="profile-card">
+            <div class="profile-name">{cast['name']}</div>
+            <div class="profile-meta">{cast['age']}歳 &nbsp;•&nbsp; {cast['job']}</div>
+            <p class="profile-desc">{cast['profile_text']}</p>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # 💬 チャット履歴のLINE風描画
+    # 💬 3. LINE風チャット履歴
     for msg in chat_history:
         if msg["role"] == "user":
             with st.chat_message("user"):
@@ -483,8 +511,8 @@ def main():
 
     st.markdown("---")
 
-    # 🚨 3. 7往復制限＆スマホ用会員登録・Stripe決済フォーム
-    if current_count >= 7 and not is_premium: # 🟢 7往復制限に変更
+    # 🚨 4. 7往復制限 ＆ Stripeサブスク決済フォーム
+    if current_count >= 7 and not is_premium:
         st.warning("🔒 続きを話すにはプレミアム会員への登録が必要です。")
         
         st.markdown(
@@ -494,7 +522,7 @@ def main():
                 <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
                     月額プレミアムプランに登録して、結愛ちゃんたちと無制限にチャットを楽しみましょう！
                 </p>
-                <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 300円（税込）</h4> <!-- 🟢 300円に変更 -->
+                <h4 style="color: #d39e00; margin-bottom: 0; font-size: 18px;">💳 月額 300円（税込）</h4>
             </div>
             """,
             unsafe_allow_html=True
@@ -503,29 +531,23 @@ def main():
         reg_email = st.text_input("メールアドレス", placeholder="your-email@example.com")
         reg_password = st.text_input("パスワード", type="password", placeholder="6文字以上のパスワード")
         
-        # 💳 Stripeでの実際のテストクレジットカード購入ボタン
         if st.button("💳 アカウント登録 ＆ クレジットカードで購入する（月額300円）", type="primary", use_container_width=True):
             if not reg_email or not reg_password:
                 st.error("⚠️ メールアドレスとパスワードを入力してください。")
             elif len(reg_password) < 6:
                 st.error("⚠️ パスワードは6文字以上で設定してください。")
             else:
-                # 1. まずデータベースに正規ユーザー（未課金）として登録/移行
                 success, msg = upgrade_guest_to_premium(USER_ID, reg_email, reg_password)
                 if success:
                     st.session_state.active_user_id = reg_email
-                    
-                    # 2. Stripeの決済用セッションURLを作成
                     if STRIPE_SECRET_KEY:
                         checkout_url = create_stripe_checkout_session(reg_email)
                         if checkout_url:
                             st.success("🎉 アカウントを作成しました！Stripeの決済ページへ移動します...")
-                            # 3. Stripeの安全な外部決済ページへ、ブラウザをリダイレクト（移動）させます！
                             st.markdown(f'<a href="{checkout_url}" target="_self" style="display:inline-block; background-color:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold; width:100%; text-align:center;">💳 今すぐ決済を完了する</a>', unsafe_allow_html=True)
                     else:
-                        # Stripeのキーがない場合は、デモ決済としてそのまま登録
                         set_user_premium_direct(reg_email, True)
-                        st.success("🎉 アカウントを作成しました！(Stripeのキーがないためデモとしてプレミアム昇格させました)")
+                        st.success("🎉 アカウントを作成しました！")
                         st.rerun()
                 else:
                     st.error(msg)
@@ -565,7 +587,7 @@ def main():
             save_chat_message(USER_ID, cast_id, "model", reply)
             st.rerun()
 
-    # ⚖️ スマホ最下部に、邪魔にならないクリーンなデザインで「規約・特商法（月額300円仕様）」を表示
+    # ⚖️ スマホ最下部に法的表示のアコーディオンを配置
     render_legal_documents()
 
     # 🛠️ 開発者用テストリセットツール
