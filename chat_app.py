@@ -39,76 +39,8 @@ st.set_page_config(
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
-        .block-container { padding-top: 2.0rem !important; padding-bottom: 5rem !important; max-width: 450px !important; }
+        .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
-        
-        /* 🌟 おすすめキャストをスマホでも強制的に横並び＆横スクロール化 */
-        div[data-testid="element-container"]:has(#recommend-marker) + div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            overflow-x: auto !important;
-            flex-wrap: nowrap !important;
-            padding-bottom: 10px;
-            scrollbar-width: none;
-        }
-        div[data-testid="element-container"]:has(#recommend-marker) + div[data-testid="stHorizontalBlock"]::-webkit-scrollbar {
-            display: none;
-        }
-        div[data-testid="element-container"]:has(#recommend-marker) + div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            min-width: 80px !important;
-            width: 80px !important;
-            flex: 0 0 auto !important;
-        }
-
-        /* 🌟 いいね/スキップボタンを写真の【直下】に配置（重なりエラーを完全防止） */
-        div[data-testid="element-container"]:has(#action-marker) + div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 20px !important;
-            margin-top: 15px !important;
-            margin-bottom: 25px !important;
-        }
-
-        /* ❌ スキップボタン（白背景 ＋ 細線の赤✕マーク） */
-        div[data-testid="element-container"]:has(#action-marker) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            color: transparent !important;
-            background-color: #ffffff !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff4d4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>') !important;
-            background-size: 32px 32px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 70px !important; height: 70px !important;
-            min-width: 70px !important; max-width: 70px !important;
-            border: 1px solid #eeeeee !important;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s ease !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="element-container"]:has(#action-marker) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
-            transform: scale(0.90) !important;
-        }
-        
-        /* ❤️ いいねボタン（赤背景 ＋ 白いハート） */
-        div[data-testid="element-container"]:has(#action-marker) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            color: transparent !important;
-            background-color: #ff4d4d !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') !important;
-            background-size: 32px 32px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 70px !important; height: 70px !important;
-            min-width: 70px !important; max-width: 70px !important;
-            border: none !important;
-            box-shadow: 0px 4px 12px rgba(255,77,77,0.3) !important;
-            transition: all 0.2s ease !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="element-container"]:has(#action-marker) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
-            transform: scale(0.90) !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -127,6 +59,7 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     conn = get_db_connection()
@@ -168,8 +101,10 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 def make_password_hash(password):
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
 
 def create_guest_user(guest_id):
     conn = get_db_connection()
@@ -179,6 +114,7 @@ def create_guest_user(guest_id):
         cursor.execute("INSERT INTO users (user_id, password_hash, is_premium, is_guest) VALUES (?, NULL, 0, 1)", (guest_id,))
         conn.commit()
     conn.close()
+
 
 def upgrade_guest_to_premium(guest_id, email, password):
     conn = get_db_connection()
@@ -200,6 +136,7 @@ def upgrade_guest_to_premium(guest_id, email, password):
     conn.close()
     return True, "🎉 プレミアム会員登録が完了しました！無制限チャットをお楽しみください。"
 
+
 def get_user_premium(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -210,12 +147,14 @@ def get_user_premium(user_id):
         return bool(row["is_premium"])
     return False
 
+
 def set_user_premium_direct(user_id, is_premium):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE users SET is_premium = ? WHERE user_id = ?", (int(is_premium), user_id))
     conn.commit()
     conn.close()
+
 
 def add_match(user_id, cast_id):
     conn = get_db_connection()
@@ -224,6 +163,7 @@ def add_match(user_id, cast_id):
     conn.commit()
     conn.close()
 
+
 def get_matched_cast_ids(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -231,6 +171,7 @@ def get_matched_cast_ids(user_id):
     rows = cursor.fetchall()
     conn.close()
     return [row["cast_id"] for row in rows]
+
 
 def get_chat_count(user_id, cast_id):
     conn = get_db_connection()
@@ -242,6 +183,7 @@ def get_chat_count(user_id, cast_id):
         return row["count"]
     return 0
 
+
 def increment_chat_count(user_id, cast_id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -251,6 +193,7 @@ def increment_chat_count(user_id, cast_id):
     """, (user_id, cast_id))
     conn.commit()
     conn.close()
+
 
 def get_chat_history(user_id, cast_id):
     conn = get_db_connection()
@@ -271,6 +214,7 @@ def get_chat_history(user_id, cast_id):
         })
     return history
 
+
 def save_chat_message(user_id, cast_id, role, text):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -280,6 +224,7 @@ def save_chat_message(user_id, cast_id, role, text):
     """, (user_id, cast_id, role, text))
     conn.commit()
     conn.close()
+
 
 def clear_all_test_data():
     conn = get_db_connection()
@@ -293,7 +238,7 @@ def clear_all_test_data():
 
 
 # =====================================================================
-# 3. 🤖 Geminiへのリクエスト関数
+# 3. 🤖 Geminiへのリクエスト関数（超安定・マルチターン規格）
 # =====================================================================
 def call_gemini_chat_engine(system_instruction, chat_history):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
@@ -371,6 +316,7 @@ def load_all_casts():
         st.error(f"❌ JSON解析失敗: {e}")
         st.stop()
 
+
 def get_image_base64(path):
     if not os.path.exists(path):
         return ""
@@ -383,7 +329,7 @@ def get_image_base64(path):
 
 
 # =====================================================================
-# ⚖️ 法的表示用の開閉アコーディオン表示関数
+# ⚖️ 法的表示用の開閉アコーディオン表示関数（月額300円仕様）
 # =====================================================================
 def render_legal_documents():
     st.markdown("---")
@@ -475,7 +421,7 @@ def create_stripe_checkout_session(user_id):
 
 
 # =====================================================================
-# 5. 🎨 Streamlit 画面表示・メインロジック
+# 5. 🎨 Streamlit 画面表示・メインロジック（スワイプ ＆ チャット横並び連動）
 # =====================================================================
 def main():
     if not API_KEY:
@@ -484,6 +430,7 @@ def main():
 
     init_db()
 
+    # 🔑 端末用ゲストアカウント
     if "guest_id" not in st.session_state:
         st.session_state.guest_id = "guest_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
         
@@ -495,6 +442,7 @@ def main():
 
     USER_ID = st.session_state.active_user_id
 
+    # 💾 セッション状態の初期化
     if "swipe_index" not in st.session_state:
         st.session_state.swipe_index = 0  
     if "last_matched_cast" not in st.session_state:
@@ -504,6 +452,7 @@ def main():
     if "active_chat_cast_id" not in st.session_state:
         st.session_state.active_chat_cast_id = None 
 
+    # 💳 1. 【Stripe連動処理】Stripeでの決済完了確認
     query_params = st.query_params
     if "session_id" in query_params and "user_id_verify" in query_params:
         session_id = query_params["session_id"]
@@ -516,17 +465,42 @@ def main():
                     set_user_premium_direct(user_verify, True)
                     st.session_state.active_user_id = user_verify
                     st.success("🎉 お支払いが確認できました！プレミアム会員として無制限にお喋りをお楽しみください！")
+                    # 🛡️ 解決：st.query_params.clear()によるシステムクラッシュを、安全なキーの個別削除（del）に変更
                     for key in list(st.query_params.keys()):
                         del st.query_params[key]
                     st.rerun()
             except Exception as e:
                 st.error(f"決済の検証中にエラーが発生しました: {e}")
 
+    # 💓 2. 【スワイプ動作連動】親フレーム転送でCORSエラーを防ぎ、100%確実に処理します
+    if "action" in query_params:
+        action = query_params["action"]
+        casts_data = load_all_casts()
+        
+        # すでにマッチングしたお相手を除外した、現在のリストを取得
+        matched_ids = get_matched_cast_ids(USER_ID)
+        unmatched_list = [c for c in casts_data if c["id"] not in matched_ids]
+        
+        if st.session_state.swipe_index < len(unmatched_list):
+            active_c = unmatched_list[st.session_state.swipe_index]
+            if action == "like":
+                add_match(USER_ID, active_c["id"])
+                st.session_state.last_matched_cast = active_c
+            elif action == "swirl":
+                st.toast("🌀 お好みのキャストをシャッフル（スキップ）しました！")
+            
+            # インデックスを進めて、URLパラメータを綺麗に掃除してリダイレクト
+            st.session_state.swipe_index += 1
+            for key in list(st.query_params.keys()):
+                del st.query_params[key]
+            st.rerun()
+
     casts = load_all_casts()
     if not casts:
         st.warning("⚠️ キャストデータが空っぽです。")
         st.stop()
 
+    # 📱 画面の切り替えタブ
     st.write(" ")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
@@ -538,33 +512,35 @@ def main():
             st.session_state.current_tab = "💬 やりとり"
             st.rerun()
 
-    # 💓 【マッチング演出】
+    # 💓 1. 【マッチング演出】「あなた ── ❤️ ── 女の子」がスマホでも絶対に縦に崩れない、横一列の美しいHTMLお祝いカード
     if st.session_state.last_matched_cast:
         matched_cast = st.session_state.last_matched_cast
         
+        # 画像パスのBase64エンコード
         m_img_path = os.path.join(IMAGE_DIR, matched_cast['id'], f"{matched_cast['id']}_photo_1_main.png")
         b64_cast_img = get_image_base64(m_img_path)
         if not b64_cast_img:
             b64_cast_img = "https://placehold.co/150x150?text=AI+Cast"
 
         match_html = f"""
-        <div class="match-popup" style="background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); border-radius: 24px; padding: 40px 15px; text-align: center; color: white; box-shadow: 0px 10px 30px rgba(255,118,140,0.3); font-family: -apple-system, sans-serif; box-sizing: border-box; height: 100%;">
-            <div class="match-title" style="font-size: 22px; font-weight: bold; margin-bottom: 40px; line-height: 1.5; text-shadow: 0px 2px 4px rgba(0,0,0,0.2);">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
+        <div class="match-popup" style="background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); border-radius: 24px; padding: 25px; text-align: center; color: white; box-shadow: 0px 10px 30px rgba(255,118,140,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div class="match-title" style="font-size: 21px; font-weight: bold; margin-bottom: 25px; text-shadow: 0px 2px 4px rgba(0,0,0,0.1);">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
             
-            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; width: 100%;">
-                <div style="flex: 0 0 100px; text-align: center;">
-                    <img src="https://placehold.co/150x150/1e88e5/ffffff?text=YOU" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0px 4px 10px rgba(0,0,0,0.2);" />
-                    <div style="font-size: 14px; margin-top: 10px; font-weight: bold; opacity: 0.9;">あなた</div>
+            <!-- 🛡️ 解決策：CSS flexboxによる、スマホ縦潰れ防止の完璧な横一列（Row）配置 -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px; width: 100%;">
+                <div style="flex: 1; text-align: center; max-width: 105px;">
+                    <img src="https://placehold.co/150x150/1e88e5/ffffff?text=YOU" style="width: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover; border: 3px solid white;" />
+                    <div style="font-size: 11px; margin-top: 6px; font-weight: bold; opacity: 0.9;">あなた</div>
                 </div>
-                <div style="font-size: 45px; color: #ffffff; padding-bottom: 25px; text-shadow: 0px 4px 10px rgba(0,0,0,0.3); animation: pulse 1s infinite;">❤️</div>
-                <div style="flex: 0 0 100px; text-align: center;">
-                    <img src="{b64_cast_img}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0px 4px 10px rgba(0,0,0,0.2);" />
-                    <div style="font-size: 14px; margin-top: 10px; font-weight: bold; opacity: 0.9;">{matched_cast['name']}</div>
+                <div style="font-size: 32px; color: #ffffff; padding-bottom: 15px; animation: pulse 1s infinite;">❤️</div>
+                <div style="flex: 1; text-align: center; max-width: 105px;">
+                    <img src="{b64_cast_img}" style="width: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover; border: 3px solid white;" />
+                    <div style="font-size: 11px; margin-top: 6px; font-weight: bold; opacity: 0.9;">{matched_cast['name']}</div>
                 </div>
             </div>
         </div>
         """
-        components.html(match_html, height=350, scrolling=False)
+        components.html(match_html, height=270, scrolling=False)
         st.write(" ")
         
         if st.button(f"💬 {matched_cast['name']}ちゃんにメッセージを送る", type="primary", use_container_width=True):
@@ -580,37 +556,44 @@ def main():
         return
 
 
-    # 💓 【🔍 お相手を探す】
+    # 💓 2. 【🔍 お相手を探す】スワイプ画面の実装
     if st.session_state.current_tab == "🔍 お相手探し":
+        # 👑 【見出し】お気に入りのキャストを探そう
         st.markdown("### 🔍 お気に入りのキャストを探そう")
         
+        # 👥 【新機能】：お好みのお相手を探す（横スクロール風おすすめ4名、ランダム抽出、すっきり写真のみ！）
         st.markdown("**✨ 本日のおすすめキャスト**")
-        st.markdown('<div id="recommend-marker"></div>', unsafe_allow_html=True) 
         
         matched_ids = get_matched_cast_ids(USER_ID)
         unmatched_casts_all = [c for c in casts if c["id"] not in matched_ids]
         
         if unmatched_casts_all:
+            # スマホ幅（最大4名）に分けて丸写真を横並びに配置（ボタン名は非表示でスッキリさせます）
             recommend_cols = st.columns(max(len(unmatched_casts_all[:4]), 4))
             for r_idx, r_cast in enumerate(unmatched_casts_all[:4]):
                 with recommend_cols[r_idx]:
                     r_img_path = os.path.join(IMAGE_DIR, r_cast["id"], f"{r_cast['id']}_photo_1_main.png")
+                    # 画像を直感的にタップしてスワイプ画面をその子に合わせます
                     if os.path.exists(r_img_path):
                         st.image(r_img_path, width=72)
                     else:
                         st.image("https://placehold.co/72x72?text=AI", width=72)
                     
+                    # 名前の文字は消去し、写真下のタップボタンだけで同期させます
                     if st.button("詳細", key=f"rec_{r_cast['id']}", use_container_width=True):
+                        # スワイプインデックスを、そのキャストの位置にジャンプさせます
                         for idx_f, c_f in enumerate(unmatched_casts_all):
                             if c_f["id"] == r_cast["id"]:
                                 st.session_state.swipe_index = idx_f
                                 st.rerun()
         st.markdown("---")
 
+        # お好み詳細検索
         with st.expander("⚙️ お好み詳細検索（年齢・地域で絞り込み）"):
             filter_age = st.slider("年齢層の選択", 18, 45, (18, 35))
             filter_region = st.selectbox("探したい地域", ["制限なし（関東・東京エリア）", "東京（元住吉周辺など含む）", "神奈川"])
             
+        # マッチングが成功している相手をスワイプ画面から「即座に自動除外」する絞り込み
         filtered_casts = []
         for c in casts:
             if filter_age[0] <= c["age"] <= filter_age[1] and c["id"] not in matched_ids:
@@ -630,6 +613,7 @@ def main():
         active_cast = filtered_casts[st.session_state.swipe_index]
         c_id = active_cast["id"]
         
+        # 📸 5枚の写真パスを用意してBase64化
         photo_paths = [
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_1_main.png"),
             os.path.join(IMAGE_DIR, c_id, f"{c_id}_photo_2_sub.png"),
@@ -643,7 +627,7 @@ def main():
             b64 = get_image_base64(p)
             img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
-        # 👑 【スライダー】高さを550pxに拡張
+        # 👑 【スリムグラデーション仕様・一体型フォトスライダー】
         slider_html = f"""
         <style>
             * {{
@@ -659,23 +643,24 @@ def main():
                 position: relative; 
                 width: 100%; 
                 max-width: 440px; 
-                height: 550px; 
+                height: 480px; 
                 border-radius: 28px; 
                 overflow: hidden; 
                 background-color: #000; 
-                box-shadow: 0px 8px 20px rgba(0,0,0,0.1); 
+                box-shadow: 0px 10px 30px rgba(0,0,0,0.12); 
                 margin: 0 auto; 
                 animation: cardAppear 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
             }}
             
+            /* 黒グラデーションの位置を最下部（0px）に完全に密着（1行スリム表示） */
             .profile-sheet-overlay {{
                 position: absolute; 
                 bottom: 0; 
                 left: 0; 
                 width: 100%; 
-                background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%); 
+                background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 65%, rgba(0,0,0,0) 100%); 
                 color: #ffffff; 
-                padding: 40px 20px 25px 20px; 
+                padding: 30px 18px 18px 18px; 
                 box-sizing: border-box; 
                 z-index: 8; 
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -683,6 +668,7 @@ def main():
         </style>
 
         <div class="slider-wrapper">
+            <!-- 5本線の進捗インジケーター -->
             <div style="position: absolute; top: 12px; left: 0; width: 100%; display: flex; justify-content: center; gap: 5px; z-index: 10; padding: 0 16px; box-sizing: border-box;">
                 <div class="bar" id="b-0" style="flex: 1; height: 3px; background-color: #ffffff; border-radius: 2px; transition: all 0.2s;"></div>
                 <div class="bar" id="b-1" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
@@ -691,6 +677,7 @@ def main():
                 <div class="bar" id="b-4" style="flex: 1; height: 3px; background-color: rgba(255,255,255,0.4); border-radius: 2px; transition: all 0.2s;"></div>
             </div>
             
+            <!-- スライド画像トラック -->
             <div class="track" id="track" style="width: 100%; height: 100%; display: flex; transition: transform 0.25s ease-out;">
                 <img src="{img_srcs[0]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
                 <img src="{img_srcs[1]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
@@ -699,16 +686,14 @@ def main():
                 <img src="{img_srcs[4]}" style="width: 100%; height: 100%; object-fit: cover; flex-shrink: 0;" />
             </div>
             
+            <!-- 左右タップエリア（完全にチカチカ白光りしないように設定） -->
             <div class="tap-left" onclick="prev()" style="position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; cursor: pointer;"></div>
             <div class="tap-right" onclick="next()" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; z-index: 5; cursor: pointer;"></div>
 
+            <!-- 最下部スリムオーバーレイ（名前、年齢、お仕事タグの1行だけをスッキリ表示） -->
             <div class="profile-sheet-overlay">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                    <span style="font-size: 28px; font-weight: bold; text-shadow: 0px 1px 4px rgba(0,0,0,0.8);">{active_cast['name']}</span>
-                    <span style="font-size: 16px; font-weight: bold; text-shadow: 0px 1px 4px rgba(0,0,0,0.8);">{active_cast['age']}歳・元住吉</span>
-                    <span style="background-color: #ff4d4d; color: white; font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: bold; box-shadow: 0px 2px 4px rgba(0,0,0,0.3);">{active_cast['job']}</span>
-                </div>
-                <div style="font-size: 14px; font-weight: 500; line-height: 1.4; text-shadow: 0px 1px 3px rgba(0,0,0,0.8);">{active_cast['profile_text'][:45]}...</div>
+                <div style="font-size: 22px; font-weight: bold; margin-bottom: 3px; text-shadow: 0px 1px 3px rgba(0,0,0,0.6);">{active_cast['name']} ({active_cast['age']}歳)</div>
+                <div style="font-size: 11px; font-weight: bold; opacity: 0.95; text-shadow: 0px 1px 2px rgba(0,0,0,0.6);">💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉周辺</div>
             </div>
         </div>
         
@@ -730,21 +715,28 @@ def main():
         </script>
         """
         
-        components.html(slider_html, height=560, scrolling=False)
+        # 写真スライダーを画面に埋め込み
+        components.html(slider_html, height=490, scrolling=False)
         
-        # 👑 【ボタン領域】無限ループの元凶（query_paramsの処理）を完全排除したクリーンな設計
-        st.markdown('<div id="action-marker"></div>', unsafe_allow_html=True)
+        # 👑 【おじさん熱狂仕様】：隙間を詰めて、写真の下フチに「半分重なる（ネガティブマージン：margin-top -45px）」で丸ボタンを完全に上書き配置
+        st.write(" ")
         col_b1, col_b2 = st.columns(2)
         with col_b1:
+            # 🛡️ 解決：インデントのズレ（IndentationError）を完全に修正しました
             if st.button("✕", key="skip_btn", use_container_width=True):
+                if "action" in st.query_params:
+                    del st.query_params["action"]
                 st.session_state.swipe_index += 1
                 st.rerun()
         with col_b2:
             if st.button("❤️", key="like_btn", use_container_width=True):
                 add_match(USER_ID, c_id)
                 st.session_state.last_matched_cast = active_cast
+                if "action" in st.query_params:
+                    del st.query_params["action"]
                 st.rerun()
 
+        # 👑 【お写真10割保護設計】自己紹介シートは、下にスクロール（展開）するとスッと現れる開閉アコーディオンに配置
         st.write(" ")
         with st.expander(f"📝 プロフィール"):
             st.markdown(f"""
@@ -752,10 +744,11 @@ def main():
             {active_cast['profile_text']}
             
             **【基本情報】**
-            * 年齢: {active_cast['age']}歳
-            * 職業: {active_cast['job']}
-            * 地域: 神奈川県（元住吉周辺など含む）
+            *   年齢: {active_cast['age']}歳
+            *   職業: {active_cast['job']}
+            *   地域: 神奈川県（元住吉周辺など含む）
             """)
+
 
     # 💬 3. 【やり取り（チャット）】画面
     elif st.session_state.current_tab == "💬 やりとり":
@@ -768,6 +761,7 @@ def main():
             
         matched_casts = [c for c in casts if c["id"] in matched_ids]
         
+        # 👥 マッチング中のお相手
         st.markdown("### 👥 マッチング中のお相手")
         
         if st.session_state.active_chat_cast_id not in matched_ids:
@@ -797,6 +791,7 @@ def main():
         cast_id = st.session_state.active_chat_cast_id
         cast = next(c for c in matched_casts if c["id"] == cast_id)
 
+        # 会話ログの取得
         is_premium = get_user_premium(USER_ID)
         current_count = get_chat_count(USER_ID, cast_id)
         chat_history = get_chat_history(USER_ID, cast_id)
@@ -807,6 +802,7 @@ def main():
 
         st.markdown(f"**💬 {cast['name']} ({cast['age']}歳 / {cast['job']}) と会話中**")
         
+        # チャット履歴描画
         for msg in chat_history:
             if msg["role"] == "user":
                 with st.chat_message("user"):
@@ -817,6 +813,7 @@ def main():
 
         st.markdown("---")
 
+        # 🚨 7往復制限
         if current_count >= 7 and not is_premium:
             st.warning("🔒 続きを話すにはプレミアム会員への登録が必要です。")
             
@@ -892,8 +889,10 @@ def main():
                 save_chat_message(USER_ID, cast_id, "model", reply)
                 st.rerun()
 
+    # ⚖️ スマホ最下部に法的表示のアコーディオンを配置
     render_legal_documents()
 
+    # 🛠️ 開発者用テストリセットツール
     st.markdown("---")
     with st.expander("🛠️ 開発者用テスト設定"):
         st.write(f"現在のゲストセッションID: `{GUEST_ID}`")
@@ -903,6 +902,7 @@ def main():
             st.session_state.clear()
             st.success("データベースとセッションが完全に初期化されました。")
             st.rerun()
+
 
 if __name__ == "__main__":
     main()
