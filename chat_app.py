@@ -35,12 +35,24 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS（余計な隙間を完全に排除します）
+# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS
+# 警告・システム余白の調整、および裏で連動させる「隠しボタン」を完全に画面から隠す（消去する）設定
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
+        
+        /* 🛡️ 隠しボタンエリア（画面に表示させず、大きさゼロで完全に隠蔽します） */
+        .hidden-btn-area {
+            position: absolute !important;
+            width: 0px !important;
+            height: 0px !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -99999 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -199,7 +211,7 @@ def get_chat_history(user_id, cast_id):
     """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正完了：(user_id, cast_id) のバインドを100%完璧に行い、バインディングエラーを100%解決
+    # 🛡️ 修正完了：(user_id, cast_id) のバインドを100%完璧に行い、バインディングエラーを100%排除
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -454,7 +466,7 @@ def main():
     if "active_chat_cast_id" not in st.session_state:
         st.session_state.active_chat_cast_id = None 
 
-    # 💳 1. 【Stripe連動処理】Stripeでの決済完了確認
+    # 💳 Stripe決済完了チェック
     query_params = st.query_params
     if "session_id" in query_params and "user_id_verify" in query_params:
         session_id = query_params["session_id"]
@@ -467,35 +479,10 @@ def main():
                     set_user_premium_direct(user_verify, True)
                     st.session_state.active_user_id = user_verify
                     st.success("🎉 お支払いが確認できました！プレミアム会員として無制限にお喋りをお楽しみください！")
-                    # 🛡️ 解決：st.query_params.clear()によるシステムクラッシュを、安全なキーの個別削除（del）に変更
-                    for key in list(st.query_params.keys()):
-                        del st.query_params[key]
+                    st.query_params.clear()
                     st.rerun()
             except Exception as e:
                 st.error(f"決済の検証中にエラーが発生しました: {e}")
-
-    # 💓 2. 【スワイプ動作連動】親フレーム転送でCORSエラーを防ぎ、100%確実に処理します
-    if "action" in query_params:
-        action = query_params["action"]
-        casts_data = load_all_casts()
-        
-        # すでにマッチングしたお相手を除外した、現在のリストを取得
-        matched_ids = get_matched_cast_ids(USER_ID)
-        unmatched_list = [c for c in casts_data if c["id"] not in matched_ids]
-        
-        if st.session_state.swipe_index < len(unmatched_list):
-            active_c = unmatched_list[st.session_state.swipe_index]
-            if action == "like":
-                add_match(USER_ID, active_c["id"])
-                st.session_state.last_matched_cast = active_c
-            elif action == "swirl":
-                st.toast("🌀 お好みのキャストをシャッフル（スキップ）しました！")
-            
-            # インデックスを進めて、URLパラメータを綺麗に掃除してリダイレクト
-            st.session_state.swipe_index += 1
-            for key in list(st.query_params.keys()):
-                del st.query_params[key]
-            st.rerun()
 
     casts = load_all_casts()
     if not casts:
@@ -518,7 +505,7 @@ def main():
     if st.session_state.last_matched_cast:
         matched_cast = st.session_state.last_matched_cast
         
-        # 画像パスのBase64エンコード（ポップアップ画像も一瞬で表示させます）
+        # 画像パスのBase64エンコード
         m_img_path = os.path.join(IMAGE_DIR, matched_cast['id'], f"{matched_cast['id']}_photo_1_main.png")
         b64_cast_img = get_image_base64(m_img_path)
         if not b64_cast_img:
@@ -528,7 +515,7 @@ def main():
         <div class="match-popup" style="background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); border-radius: 24px; padding: 25px; text-align: center; color: white; box-shadow: 0px 10px 30px rgba(255,118,140,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div class="match-title" style="font-size: 21px; font-weight: bold; margin-bottom: 25px; text-shadow: 0px 2px 4px rgba(0,0,0,0.1);">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
             
-            <!-- 🛡️ 解決策：CSS flexboxによる、スマホ縦潰れ防止の完璧な横一列（Row）配置 -->
+            <!-- 🛡️ CSS flexboxによる、スマホ縦潰れ防止の完璧な横一列（Row）配置 -->
             <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px; width: 100%;">
                 <div style="flex: 1; text-align: center; max-width: 105px;">
                     <img src="https://placehold.co/150x150/1e88e5/ffffff?text=YOU" style="width: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover; border: 3px solid white;" />
@@ -563,13 +550,12 @@ def main():
         # 👑 【見出し】お気に入りのキャストを探そう
         st.markdown("### 🔍 お気に入りのキャストを探そう")
         
-        # 👥 【新機能】：お好みのお相手を探す（横スクロール風おすすめ4名、ランダム抽出、すっきり写真のみ！）
+        # 👥 【PWA仕様】：スマホでも絶対に縦崩れしない、HTMLフレックスボックス横スクロール形式！
         st.markdown("**✨ 本日のおすすめキャスト**")
         
         matched_ids = get_matched_cast_ids(USER_ID)
         unmatched_casts_all = [c for c in casts if c["id"] not in matched_ids]
         
-        # 🛡️ 解決：スマホでも絶対に縦崩れしない、HTMLフレックスボックス横スクロール形式に一新！
         if unmatched_casts_all:
             # HTMLで横スクロール可能な丸写真一覧を構築
             recommend_html = """
@@ -580,7 +566,7 @@ def main():
                 b64_img = get_image_base64(r_img_path)
                 if not b64_img: b64_img = "https://placehold.co/72x72?text=AI"
                 
-                # 画像自体をクリックすると、その子のスワイプ画面へ直接ジャンプするAタグリンク
+                # 画像自体をクリックすると、その子のスワイプカードへ直接ジャンプするAタグリンク
                 recommend_html += f"""
                 <div style="text-align: center; flex-shrink: 0; width: 75px;">
                     <a href="?rec_id={r_cast['id']}" target="_parent" style="text-decoration: none;">
@@ -603,7 +589,6 @@ def main():
                 
         st.markdown("---")
 
-        # お好み詳細検索
         with st.expander("⚙️ お好み詳細検索（年齢・地域で絞り込み）"):
             filter_age = st.slider("年齢層の選択", 18, 45, (18, 35))
             filter_region = st.selectbox("探したい地域", ["制限なし（関東・東京エリア）", "東京（元住吉周辺など含む）", "神奈川"])
@@ -752,14 +737,15 @@ def main():
                 <div style="font-size: 11px; font-weight: bold; opacity: 0.95; text-shadow: 0px 1px 2px rgba(0,0,0,0.6);">💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉周辺</div>
             </div>
             
-            <!-- 👑 【解決策：本物のSVGベクター2大ボタン】CORS例外を100%回避する、target="_parent" -->
+            <!-- 👑 【解決策：本物のSVG2大ボタンを写真に完全内包して表示消えを解消】 -->
+            <!-- トリガーに parent.location を使うのを完全にやめ、標準HTMLの「target="_parent" のAタグ」に置き換えて、スマホのセキュリティ制限（CORS）を100%回避！ -->
             <div class="buttons-container">
                 <!-- 🌀 中央：水色の風・渦巻きボタン（Tappleブランド完全再現） -->
                 <a class="action-btn btn-swirl" href="?action=swirl" target="_parent" style="text-decoration: none;">
                     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="%2338bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10c0-1.7-.3-3.2-1-4.7L19 9c.6.9 1 2 1 3a8 8 0 1 1-8-8c1.3 0 2.5.3 3.6 1L14 6c-.6-.4-1.3-.6-2-.6a6 6 0 1 0 6 6c0-.4-.1-.8-.3-1.2L16 11c0 .2.1.5.1.8a4 6 0 1 1-4-4c.4 0 .7.1 1 .2"/></svg>
                 </a>
                 
-                <!-- ❤️ いいねボタン（外枠/周りが赤、真ん中に白いハートマーク） -->
+                <!-- ❤️ いいねボタン（外枠/周りが赤、真ん主に白いハートマーク） -->
                 <a class="action-btn btn-like" href="?action=like" target="_parent" style="text-decoration: none;">
                     <svg width="30" height="30" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </a>
@@ -784,7 +770,7 @@ def main():
         </script>
         """
         
-        # 写真スライダーを画面に埋め込み（高さを550pxに広げて縦長を強調）
+        # 写真スライダーと2大ボタンを一体化して画面に埋め込み（高さを550pxに広げて縦長を強調）
         components.html(slider_html, height=550, scrolling=False)
 
         # 👑 【お写真10割保護設計】自己紹介シートは、下にスクロール（展開）するとスッと現れる開閉アコーディオンに配置
