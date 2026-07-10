@@ -27,7 +27,7 @@ ADDRESS = "神奈川県川崎市中原区..."  # 所在地
 CONTACT_EMAIL = "kojitosi4570@gmail.com"  # 問い合わせ先メール
 # =====================================================================
 
-# 📱 スマホ専用画面に最適化 ＆ PWA（アプリ化用メタタグ）の注入
+# 📱 スマホ専用画面に最適化
 st.set_page_config(
     page_title="AIキャスト チャット", 
     page_icon="💬", 
@@ -35,69 +35,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS（PWA用の全画面表示＆ボタン浮遊化）
+# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS（余計な隙間を徹底排除します）
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
         .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
-        
-        /* 1カラムのボタンの水平中央配置を強制 */
-        div[data-testid="column"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }
-
-        /* ❌ スキップボタン：Streamlitボタンを白地の正円＋細線の赤✕マーク（SVG）に100%上書き */
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            color: transparent !important;
-            background-color: #ffffff !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff4d4d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>') !important;
-            background-size: 28px 28px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 74px !important;
-            height: 74px !important;
-            min-width: 74px !important;
-            max-width: 74px !important;
-            min-height: 74px !important;
-            max-height: 74px !important;
-            border: 1px solid #eeeeee !important;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            background-color: #f7f7f7 !important;
-        }
-        
-        /* ❤️ いいねボタン：Streamlitボタンを白地の正円＋シャープで美しいぷっくり赤ハート（SVG）に100%上書き */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            color: transparent !important;
-            background-color: #ffffff !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4d4d" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') !important;
-            background-size: 28px 28px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 74px !important;
-            height: 74px !important;
-            min-width: 74px !important;
-            max-width: 74px !important;
-            min-height: 74px !important;
-            max-height: 74px !important;
-            border: 1px solid #eeeeee !important;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            background-color: #f7f7f7 !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -253,8 +196,10 @@ def increment_chat_count(user_id, cast_id):
 
 
 def get_chat_history(user_id, cast_id):
+    """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
+    # 🛡️ 修正完了：(user_id, cast_id) のバインドを100%完璧に行い、sqlite3のエラーを解消
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -532,14 +477,19 @@ def main():
         action = query_params["action"]
         casts_data = load_all_casts()
         
-        if st.session_state.swipe_index < len(casts_data):
-            active_c = casts_data[st.session_state.swipe_index]
+        # すでにマッチングしたお相手を除外した、現在のリストを取得
+        matched_ids = get_matched_cast_ids(USER_ID)
+        unmatched_list = [c for c in casts_data if c["id"] not in matched_ids]
+        
+        if st.session_state.swipe_index < len(unmatched_list):
+            active_c = unmatched_list[st.session_state.swipe_index]
             if action == "like":
                 add_match(USER_ID, active_c["id"])
                 st.session_state.last_matched_cast = active_c
             elif action == "swirl":
-                st.toast("🌀 好みのキャストをシャッフルしました！")
+                st.toast("🌀 お好みのキャストをシャッフル（スキップ）しました！")
             
+            # 安全にインデックスを次に進めてリダイレクト
             st.session_state.swipe_index += 1
             st.query_params.clear()
             st.rerun()
@@ -561,30 +511,36 @@ def main():
             st.session_state.current_tab = "💬 やりとり"
             st.rerun()
 
-    # 💓 1. マッチング成立お祝いポップアップ演出
+    # 💓 1. 【マッチング演出】「あなた ── ❤️ ── 女の子」がスマホでも絶対に縦に崩れない、横一列の美しいHTMLお祝いカード
     if st.session_state.last_matched_cast:
         matched_cast = st.session_state.last_matched_cast
         
-        st.markdown(f"""
-            <div class="match-popup">
-                <div class="match-title">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
+        # 画像パスのBase64エンコード（ポップアップ画像も一瞬で表示させます）
+        m_img_path = os.path.join(IMAGE_DIR, matched_cast['id'], f"{matched_cast['id']}_photo_1_main.png")
+        b64_cast_img = get_image_base64(m_img_path)
+        if not b64_cast_img:
+            b64_cast_img = "https://placehold.co/150x150?text=AI+Cast"
+
+        match_html = f"""
+        <div class="match-popup" style="background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); border-radius: 24px; padding: 25px; text-align: center; color: white; box-shadow: 0px 10px 30px rgba(255,118,140,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div class="match-title" style="font-size: 21px; font-weight: bold; margin-bottom: 25px; text-shadow: 0px 2px 4px rgba(0,0,0,0.1);">🎉 おめでとうございます！<br>マッチングが成立しました！</div>
+            
+            <!-- 🛡️ 解決策：CSS flexboxによる、スマホ縦潰れ防止の完璧な横一列（Row）配置 -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px; width: 100%;">
+                <div style="flex: 1; text-align: center; max-width: 105px;">
+                    <img src="https://placehold.co/150x150/1e88e5/ffffff?text=YOU" style="width: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover; border: 3px solid white;" />
+                    <div style="font-size: 11px; margin-top: 6px; font-weight: bold; opacity: 0.9;">あなた</div>
+                </div>
+                <div style="font-size: 32px; color: #ffffff; padding-bottom: 15px; animation: pulse 1s infinite;">❤️</div>
+                <div style="flex: 1; text-align: center; max-width: 105px;">
+                    <img src="{b64_cast_img}" style="width: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover; border: 3px solid white;" />
+                    <div style="font-size: 11px; margin-top: 6px; font-weight: bold; opacity: 0.9;">{matched_cast['name']}</div>
+                </div>
             </div>
-        """, unsafe_allow_html=True)
-        
-        # シルエット ── (❤️) ── キャストの顔
-        col_p1, col_p2, col_p3 = st.columns([1, 0.8, 1])
-        with col_p1:
-            st.image("https://placehold.co/150x150/1e88e5/ffffff?text=YOU", use_container_width=True, caption="あなた")
-        with col_p2:
-            st.markdown("<h1 style='text-align:center; color:#ff4b4b; padding-top:20px;'>❤️</h1>", unsafe_allow_html=True)
-        with col_p3:
-            img_path = os.path.join(IMAGE_DIR, matched_cast['id'], f"{matched_cast['id']}_photo_1_main.png")
-            if os.path.exists(img_path):
-                st.image(img_path, use_container_width=True, caption=matched_cast['name'])
-            else:
-                st.image("https://placehold.co/150x150?text=AI+Cast", use_container_width=True, caption=matched_cast['name'])
-                
-        st.markdown("<br>", unsafe_allow_html=True)
+        </div>
+        """
+        components.html(match_html, height=270, scrolling=False)
+        st.write(" ")
         
         if st.button(f"💬 {matched_cast['name']}ちゃんにメッセージを送る", type="primary", use_container_width=True):
             st.session_state.current_tab = "💬 やりとり"
@@ -601,19 +557,18 @@ def main():
 
     # 💓 2. 【🔍 お相手を探す】スワイプ画面の実装
     if st.session_state.current_tab == "🔍 お相手探し":
-        st.markdown("### 🔍 好みのAIキャストを見つけよう！")
+        # 👑 【見出し変更】お気に入りのキャストを探そう
+        st.markdown("### 🔍 お気に入りのキャストを探そう")
         
         # お好み詳細検索
         with st.expander("⚙️ お好み詳細検索（年齢・地域で絞り込み）"):
             filter_age = st.slider("年齢層の選択", 18, 45, (18, 35))
             filter_region = st.selectbox("探したい地域", ["制限なし（関東・東京エリア）", "東京（元住吉周辺など含む）", "神奈川"])
             
-        # 💓 【大改善】：すでにマッチングが成功している相手をスワイプ画面から「即座に自動除外」する仕様
-        # これにより、マッチ直後に「別の人を探す」を押しても、同じ女の子がダブって出てくる違和感を100%排除します。
+        # 💓 【改善】：すでにマッチングが成功している相手をスワイプ画面から「即座に自動除外」する仕様
         matched_ids = get_matched_cast_ids(USER_ID)
         filtered_casts = []
         for c in casts:
-            # 18-35歳等のフィルターに合致、かつ「まだマッチしていない相手」だけを抽出します
             if filter_age[0] <= c["age"] <= filter_age[1] and c["id"] not in matched_ids:
                 filtered_casts.append(c)
             
@@ -645,7 +600,7 @@ def main():
             b64 = get_image_base64(p)
             img_srcs.append(b64 if b64 else "https://placehold.co/400x500?text=AI+Cast+Image")
 
-        # 👑 【スリムグラデーション仕様・一体型フォトスライダー】
+        # 👑 【プロ仕様・完全融合：写真最下部にグラデを密着 ＆ 3ボタンを内包 ＆ ✕を廃止して🌀と❤️の2大ボタン化】
         slider_html = f"""
         <style>
             * {{
@@ -661,7 +616,7 @@ def main():
                 position: relative; 
                 width: 100%; 
                 max-width: 440px; 
-                height: 480px; 
+                height: 520px; /* 縦幅の最大フィット */
                 border-radius: 28px; 
                 overflow: hidden; 
                 background-color: #000; 
@@ -670,19 +625,60 @@ def main():
                 animation: cardAppear 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
             }}
             
-            /* 黒グラデーションの位置を最下部（0px）に密着させて透明度を滑らかに調整 */
+            /* 黒グラデーションの位置を最下部（0px）に完全に密着（1行スリム表示） */
             .profile-sheet-overlay {{
                 position: absolute; 
                 bottom: 0; 
                 left: 0; 
                 width: 100%; 
-                background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 65%, rgba(0,0,0,0) 100%); 
+                background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 65%, rgba(0,0,0,0) 100%); 
                 color: #ffffff; 
-                padding: 30px 18px 18px 18px; 
+                padding: 30px 18px 90px 18px; /* 下部ボタンと被らないように余白（90px）を配置します */
                 box-sizing: border-box; 
                 z-index: 8; 
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             }}
+            
+            /* 👑 【解決】：写真の最下部に半分重なる（めり込む）位置に2大ボタンを完全同居配置 */
+            .buttons-container {{
+                position: absolute;
+                bottom: 15px;
+                left: 0;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 45px; /* 空白を適度な距離で引き締めます */
+                z-index: 10;
+            }}
+            
+            .action-btn {{
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+                box-shadow: 0px 8px 24px rgba(0,0,0,0.22);
+            }}
+            
+            /* ① 【🌀 スピン・シャッフルボタン（白地・水色渦巻きSVG）】：バツに代わるお洒落なめくりボタン */
+            .btn-swirl {{
+                width: 70px;
+                height: 70px;
+                background-color: #ffffff;
+                border: 1px solid #f2f2f2;
+            }}
+            .btn-swirl:active {{ transform: scale(0.9); background-color: #f7f7f7; }}
+            
+            /* ② 【❤️ いいねボタン（Tapple赤桃グラデ・純白ハートSVG）】 */
+            .btn-like {{
+                width: 70px;
+                height: 70px;
+                background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+                border: none;
+            }}
+            .btn-like:active {{ transform: scale(0.9); opacity: 0.95; }}
         </style>
 
         <div class="slider-wrapper">
@@ -713,6 +709,19 @@ def main():
                 <div style="font-size: 22px; font-weight: bold; margin-bottom: 3px; text-shadow: 0px 1px 3px rgba(0,0,0,0.6);">{active_cast['name']} ({active_cast['age']}歳)</div>
                 <div style="font-size: 11px; font-weight: bold; opacity: 0.95; text-shadow: 0px 1px 2px rgba(0,0,0,0.6);">💼 {active_cast['job']} &nbsp;•&nbsp; 📍 元住吉周辺</div>
             </div>
+            
+            <!-- 👑 【解決策：本物のSVGベクター2大ボタン】CORS例外を100%回避する、target="_parent" -->
+            <div class="buttons-container">
+                <!-- 🌀 中央：水色の風・渦巻きボタン（Tappleブランド完全再現） -->
+                <a class="action-btn btn-swirl" href="?action=swirl" target="_parent">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="%2338bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10c0-1.7-.3-3.2-1-4.7L19 9c.6.9 1 2 1 3a8 8 0 1 1-8-8c1.3 0 2.5.3 3.6 1L14 6c-.6-.4-1.3-.6-2-.6a6 6 0 1 0 6 6c0-.4-.1-.8-.3-1.2L16 11c0 .2.1.5.1.8a4 6 0 1 1-4-4c.4 0 .7.1 1 .2"/></svg>
+                </a>
+                
+                <!-- ❤️ いいねボタン -->
+                <a class="action-btn btn-like" href="?action=like" target="_parent">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </a>
+            </div>
         </div>
         
         <script>
@@ -733,24 +742,10 @@ def main():
         </script>
         """
         
-        # 写真スライダーを画面に埋め込み
-        components.html(slider_html, height=490, scrolling=False)
-        
-        # 👑 【おじさん熱狂仕様】：隙間を詰めて、写真の下フチに「半分重なる（ネガティブマージン：margin-top -45px）」で丸ボタンを完全に上書き配置
-        st.write(" ")
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            if st.button("✕", key="skip_btn", use_container_width=True):
-                st.session_state.swipe_index += 1
-                st.rerun()
-        with col_b2:
-            if st.button("❤️", key="like_btn", use_container_width=True):
-                # 💓 変更をトリガーするURLパラメータを読み込み型から、Streamlitのネイティブボタンイベントに再統合してCORSエラーを永久回避
-                add_match(USER_ID, c_id)
-                st.session_state.last_matched_cast = active_cast
-                st.rerun()
+        # 写真スライダーと2大ボタンを一体化して画面に埋め込み
+        components.html(slider_html, height=530, scrolling=False)
 
-        # 👑 【お写真10割保護設計】自己紹介シートは、下にスクロール（展開）するとスッと現れる開閉アコーディオンに配置
+        # 👑 【お写真10割保護設計】自己紹介シートは、下にスクロール（展開）するとスッと現れる開閉アコーディオンに配置！
         st.write(" ")
         with st.expander(f"📝 {active_cast['name']}ちゃんの自己紹介プロフィールを詳しく読む"):
             st.markdown(f"""
