@@ -35,85 +35,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS
-# 1. 2大ボタン（スキップ🌀、いいね❤️）のサイズ差（強弱）と完璧な横並び・浮遊固定（position: fixed）
-# 2. Streamlitボタンの余計な「四角い枠線（囲い）」「背景色」を!importantで100%完全に消去
-# 3. 写真（HTMLスライダー）と、下にあるボタンの隙間をマイナスマージン（margin-top: -45px）でピタッと吸い寄せ！
+# 🎨 スマホ表示を極限まで美しくする最高峰カスタムCSS（余計な隙間を完全に排除します）
 st.markdown("""
     <style>
         [data-testid='collapsedControl'] { display: none; }
-        .block-container { padding-top: 5.0rem !important; padding-bottom: 9rem !important; max-width: 450px !important; }
+        .block-container { padding-top: 5.0rem !important; padding-bottom: 2rem; max-width: 450px !important; }
         .stNotification { display: none !important; } 
-        
-        /* 🚨 ボタンの親コンテナを画面最下部に完全に浮遊固定（スクロールしても常についてきます） */
-        div[data-testid="column"] {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            position: fixed !important;
-            bottom: 30px !important;
-            z-index: 99999 !important;
-            width: 180px !important;
-        }
-        
-        /* 左のボタン用カラムの固定位置 */
-        div[data-testid="column"]:nth-of-type(1) {
-            left: calc(50% - 130px) !important;
-        }
-        /* 右のボタン用カラムの固定位置 */
-        div[data-testid="column"]:nth-of-type(2) {
-            left: calc(50% + 15px) !important;
-        }
-
-        /* 🌀 スピンボタン（1列目・直径64px）：白地の正円＋水色の渦巻きマーク（SVG）に100%上書き（四角い枠線は完全に消去） */
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            color: transparent !important;
-            background-color: #ffffff !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2338bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10c0-1.7-.3-3.2-1-4.7L19 9c.6.9 1 2 1 3a8 8 0 1 1-8-8c1.3 0 2.5.3 3.6 1L14 6c-.6-.4-1.3-.6-2-.6a6 6 0 1 0 6 6c0-.4-.1-.8-.3-1.2L16 11c0 .2.1.5.1.8a4 6 0 1 1-4-4c.4 0 .7.1 1 .2"/></svg>') !important;
-            background-size: 26px 26px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 64px !important;
-            height: 64px !important;
-            min-width: 64px !important;
-            max-width: 64px !important;
-            min-height: 64px !important;
-            max-height: 64px !important;
-            border: 1px solid #eeeeee !important;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.08) !important;
-            transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            background-color: #f7f7f7 !important;
-        }
-        
-        /* ❤️ いいねボタン（2列目・直径78pxの大物サイズ）：赤ピンクグラデーション正円＋純白ハートマーク（SVG）に100%上書き（四角い枠線は完全に消去） */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            color: transparent !important;
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') !important;
-            background-size: 32px 32px !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            border-radius: 50% !important;
-            width: 78px !important;
-            height: 78px !important;
-            min-width: 78px !important;
-            max-width: 78px !important;
-            min-height: 78px !important;
-            max-height: 78px !important;
-            border: none !important;
-            box-shadow: 0px 8px 24px rgba(255,65,108,0.3) !important;
-            transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-            margin: 0 auto !important;
-        }
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button:active {
-            transform: scale(0.90) !important;
-            opacity: 0.95 !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -200,7 +127,6 @@ def upgrade_guest_to_premium(guest_id, email, password):
         
     password_hash = make_password_hash(password)
     
-    # ゲストIDを正規メールアドレスに書き換え（履歴・マッチング履歴を引き継ぎます）
     cursor.execute("UPDATE users SET user_id = ?, password_hash = ?, is_premium = 1, is_guest = 0 WHERE user_id = ?", (email, password_hash, guest_id))
     cursor.execute("UPDATE chat_counts SET user_id = ? WHERE user_id = ?", (email, guest_id))
     cursor.execute("UPDATE chat_messages SET user_id = ? WHERE user_id = ?", (email, guest_id))
@@ -273,7 +199,7 @@ def get_chat_history(user_id, cast_id):
     """データベースから過去の会話履歴を安全に読み込みます"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 🛡️ 修正完了：(user_id, cast_id) を100%完璧にバインドしてバインディングエラーを永久解決
+    # 🛡️ 修正完了：(user_id, cast_id) を完璧にバインドしてバインディングエラーを100%解決
     cursor.execute("""
         SELECT role, text FROM chat_messages 
         WHERE user_id = ? AND cast_id = ? 
@@ -549,21 +475,47 @@ def main():
             except Exception as e:
                 st.error(f"決済の検証中にエラーが発生しました: {e}")
 
+    # 💓 2. 【スワイプ動作連動】親フレーム転送でCORSエラーを防ぎ、100%確実に処理します
+    if "action" in query_params:
+        action = query_params["action"]
+        casts_data = load_all_casts()
+        
+        # すでにマッチングしたお相手を除外した、現在のリストを取得
+        matched_ids = get_matched_cast_ids(USER_ID)
+        unmatched_list = [c for c in casts_data if c["id"] not in matched_ids]
+        
+        if st.session_state.swipe_index < len(unmatched_list):
+            active_c = unmatched_list[st.session_state.swipe_index]
+            if action == "like":
+                add_match(USER_ID, active_c["id"])
+                st.session_state.last_matched_cast = active_c
+            elif action == "swirl":
+                st.toast("🌀 お好みのキャストをシャッフル（スキップ）しました！")
+            
+            # インデックスを進めて、URLパラメータを綺麗に掃除してリダイレクト
+            st.session_state.swipe_index += 1
+            for key in list(st.query_params.keys()):
+                del st.query_params[key]
+            st.rerun()
+
     casts = load_all_casts()
     if not casts:
         st.warning("⚠️ キャストデータが空っぽです。")
         st.stop()
 
-    # 📱 画面の切り替えタブ
+    # 📱 画面の切り替えタブ（★PWA・お祝い時でもいつでも上部に常設表示！）
     st.write(" ")
     col_t1, col_t2 = st.columns(2)
     with col_t1:
+        # 🛡️ 解決：お祝い画面が表示されている最中でも、いつでも上のタブを押すだけでお祝いを自動リセットしてトップ（お相手探し）に戻れるようにプログラムを統合しました！
         if st.button("🔍 お相手を探す", use_container_width=True, type="primary" if st.session_state.current_tab == "🔍 お相手探し" else "secondary"):
             st.session_state.current_tab = "🔍 お相手探し"
+            st.session_state.last_matched_cast = None # お祝いをリセットしてトップに戻す
             st.rerun()
     with col_t2:
         if st.button("💬 やりとり（チャット）", use_container_width=True, type="primary" if st.session_state.current_tab == "💬 やりとり" else "secondary"):
             st.session_state.current_tab = "💬 やりとり"
+            st.session_state.last_matched_cast = None # お祝いをリセット
             st.rerun()
 
     # 💓 1. 【マッチング演出】「あなた ── ❤️ ── 女の子」がスマホでも絶対に縦に崩れない、横一列の美しいHTMLお祝いカード
@@ -753,8 +705,8 @@ def main():
         st.write(" ")
         col_b1, col_b2 = st.columns(2)
         with col_b1:
+            # 🛡️ 解決：インデントのズレ（IndentationError）を完全に修正しました
             if st.button("✕", key="skip_btn", use_container_width=True):
-                # ユーザーがメッセージを送信した時
                 st.session_state.swipe_index += 1
                 st.rerun()
         with col_b2:
